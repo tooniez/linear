@@ -1,5 +1,13 @@
 # Change Log
 
+## 3.0.7
+
+### Patch Changes
+
+- Updated dependencies [dbbaa78]
+- Updated dependencies [78f6cba]
+  - @linear/sdk@72.0.0
+
 ## 3.0.6
 
 ### Patch Changes
