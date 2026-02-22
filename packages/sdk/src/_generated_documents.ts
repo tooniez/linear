@@ -189,7 +189,7 @@ export type AgentActivityCreatePromptInput = {
   /** The agent session this activity belongs to. */
   agentSessionId: Scalars["String"];
   /** The content payload of the prompt agent activity. */
-  content: Scalars["JSONObject"];
+  content: AgentActivityPromptCreateInputContent;
   /** [Internal] Metadata about user-provided contextual information for this agent activity. */
   contextualMetadata?: InputMaybe<Scalars["JSONObject"]>;
   /** The identifier in UUID v4 format. If none is provided, the backend will generate one. */
@@ -270,6 +270,16 @@ export type AgentActivityPromptContent = {
   bodyData: Scalars["JSONObject"];
   /** The type of activity. */
   type: AgentActivityType;
+};
+
+/** [Internal] Input for creating prompt-type agent activities (created by users). */
+export type AgentActivityPromptCreateInputContent = {
+  /** A message requesting additional information or action from user in markdown format. */
+  body?: InputMaybe<Scalars["String"]>;
+  /** [Internal] The prompt content as a ProseMirror document. */
+  bodyData?: InputMaybe<Scalars["JSON"]>;
+  /** The type of activity. */
+  type?: AgentActivityType;
 };
 
 /** Content for a response activity. */
@@ -380,8 +390,6 @@ export type AgentSession = Node & {
   issue?: Maybe<Issue>;
   /** A dynamically updated list of the agent's execution strategy. */
   plan?: Maybe<Scalars["JSON"]>;
-  /** [Internal] A formatted prompt string containing relevant context for the agent session, including issue details, comments, and guidance. */
-  promptContext?: Maybe<Scalars["String"]>;
   /** [Internal] Pull requests associated with this agent session. */
   pullRequests: AgentSessionToPullRequestConnection;
   /** The comment that this agent session was spawned from, if from a different thread. */
@@ -792,61 +800,6 @@ export type AsksChannelConnectPayload = {
   mapping: SlackChannelNameMapping;
   /** Whether the operation was successful. */
   success: Scalars["Boolean"];
-};
-
-/** Settings for an Asks web form. */
-export type AsksWebSettings = Node & {
-  __typename?: "AsksWebSettings";
-  /** The time at which the entity was archived. Null if the entity has not been archived. */
-  archivedAt?: Maybe<Scalars["DateTime"]>;
-  /** The time at which the entity was created. */
-  createdAt: Scalars["DateTime"];
-  /** The user who created the Asks web settings. */
-  creator?: Maybe<User>;
-  /** The custom domain for the Asks web form. If null, the default Linear-hosted domain will be used. */
-  domain?: Maybe<Scalars["String"]>;
-  /** The email intake address associated with these Asks web settings. */
-  emailIntakeAddress?: Maybe<EmailIntakeAddress>;
-  /** The unique identifier of the entity. */
-  id: Scalars["ID"];
-  /** The identity provider for SAML authentication on this Asks web form. */
-  identityProvider?: Maybe<IdentityProvider>;
-  /** The organization that the Asks web settings are associated with. */
-  organization: Organization;
-  /**
-   * The last time at which the entity was meaningfully updated. This is the same as the creation time if the entity hasn't
-   *     been updated after creation.
-   */
-  updatedAt: Scalars["DateTime"];
-};
-
-export type AsksWebSettingsCreateInput = {
-  /** The custom domain for the Asks web form. If null, the default Linear-hosted domain will be used. */
-  domain?: InputMaybe<Scalars["String"]>;
-  /** The identifier in UUID v4 format. If none is provided, the backend will generate one. */
-  id?: InputMaybe<Scalars["String"]>;
-};
-
-export type AsksWebSettingsEmailIntakeAddressInput = {
-  /** The email address for forwarding. */
-  forwardingEmailAddress?: InputMaybe<Scalars["String"]>;
-  /** The sender name for outgoing emails. */
-  senderName?: InputMaybe<Scalars["String"]>;
-};
-
-export type AsksWebSettingsPayload = {
-  __typename?: "AsksWebSettingsPayload";
-  /** The Asks web settings that were created or updated. */
-  asksWebSettings: AsksWebSettings;
-  /** The identifier of the last sync operation. */
-  lastSyncId: Scalars["Float"];
-  /** Whether the operation was successful. */
-  success: Scalars["Boolean"];
-};
-
-export type AsksWebSettingsUpdateInput = {
-  /** The custom domain for the Asks web form. If null, the default Linear-hosted domain will be used. */
-  domain?: InputMaybe<Scalars["String"]>;
 };
 
 /** Issue assignee sorting options. */
@@ -1353,6 +1306,37 @@ export type CandidateRepository = {
   repositoryFullName: Scalars["String"];
 };
 
+/** [Internal] Coding agent sandbox details for an agent session. */
+export type CodingAgentSandboxPayload = {
+  __typename?: "CodingAgentSandboxPayload";
+  /** The agent session identifier. */
+  agentSessionId: Scalars["String"];
+  /** Git ref to checkout. */
+  baseRef?: Maybe<Scalars["String"]>;
+  /** Git branch name for this sandbox. */
+  branchName?: Maybe<Scalars["String"]>;
+  /** When the sandbox was created. */
+  createdAt: Scalars["DateTime"];
+  /** The user who initiated the session. */
+  creatorId?: Maybe<Scalars["String"]>;
+  /** When the session reached a terminal state. */
+  endedAt?: Maybe<Scalars["DateTime"]>;
+  /** The sandbox identifier. */
+  id: Scalars["String"];
+  /** The organization identifier. */
+  organizationId: Scalars["String"];
+  /** GitHub repository in owner/repo format. */
+  repository: Scalars["String"];
+  /** The sandbox logs URL. */
+  sandboxLogsUrl?: Maybe<Scalars["String"]>;
+  /** Current sandbox URL. */
+  sandboxUrl?: Maybe<Scalars["String"]>;
+  /** When the sandbox first became active. */
+  startedAt?: Maybe<Scalars["DateTime"]>;
+  /** Claude Agent SDK conversation ID. */
+  workerConversationId?: Maybe<Scalars["String"]>;
+};
+
 /** A comment associated with an issue. */
 export type Comment = Node & {
   __typename?: "Comment";
@@ -1398,6 +1382,8 @@ export type Comment = Node & {
   issue?: Maybe<Issue>;
   /** The ID of the issue that the comment is associated with. */
   issueId?: Maybe<Scalars["String"]>;
+  /** [Internal] The user on whose behalf the comment was created, e.g. when the Linear assistant creates a comment for a user. */
+  onBehalfOf?: Maybe<User>;
   /** The parent comment under which the current comment is nested. */
   parent?: Maybe<Comment>;
   /** The ID of the parent comment under which the current comment is nested. */
@@ -1422,6 +1408,8 @@ export type Comment = Node & {
   resolvingCommentId?: Maybe<Scalars["String"]>;
   /** The user that resolved the thread. */
   resolvingUser?: Maybe<User>;
+  /** [Internal] Agent sessions spawned from this comment. */
+  spawnedAgentSessions: AgentSessionConnection;
   /** The external services the comment is synced with. */
   syncedWith?: Maybe<Array<ExternalEntityInfo>>;
   /** [Internal] A generated summary of the comment thread. */
@@ -1463,6 +1451,16 @@ export type CommentCreatedIssuesArgs = {
   after?: InputMaybe<Scalars["String"]>;
   before?: InputMaybe<Scalars["String"]>;
   filter?: InputMaybe<IssueFilter>;
+  first?: InputMaybe<Scalars["Int"]>;
+  includeArchived?: InputMaybe<Scalars["Boolean"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<PaginationOrderBy>;
+};
+
+/** A comment associated with an issue. */
+export type CommentSpawnedAgentSessionsArgs = {
+  after?: InputMaybe<Scalars["String"]>;
+  before?: InputMaybe<Scalars["String"]>;
   first?: InputMaybe<Scalars["Int"]>;
   includeArchived?: InputMaybe<Scalars["Boolean"]>;
   last?: InputMaybe<Scalars["Int"]>;
@@ -3760,6 +3758,8 @@ export type DocumentContent = Node & {
   project?: Maybe<Project>;
   /** The project milestone that the content is associated with. */
   projectMilestone?: Maybe<ProjectMilestone>;
+  /** [Internal] The pull request that the content is associated with. */
+  pullRequest?: Maybe<PullRequest>;
   /** The time at which the document content was restored from a previous version. */
   restoredAt?: Maybe<Scalars["DateTime"]>;
   /**
@@ -4588,6 +4588,21 @@ export type EstimateSort = {
   order?: InputMaybe<PaginationSortOrder>;
 };
 
+export type EventTrackingInput = {
+  /** The event name to track. */
+  event: Scalars["String"];
+  /** Optional properties for the event. */
+  properties?: InputMaybe<Scalars["JSONObject"]>;
+  /** Client session ID for PostHog session correlation. */
+  sessionId?: InputMaybe<Scalars["String"]>;
+};
+
+export type EventTrackingPayload = {
+  __typename?: "EventTrackingPayload";
+  /** Whether the operation was successful. */
+  success: Scalars["Boolean"];
+};
+
 /** Information about an external entity. */
 export type ExternalEntityInfo = {
   __typename?: "ExternalEntityInfo";
@@ -5276,6 +5291,8 @@ export type GitHubRepoMappingInput = {
 export type GitHubSettingsInput = {
   /** Whether the integration has code access */
   codeAccess?: InputMaybe<Scalars["Boolean"]>;
+  /** The enterprise URL if this is a GitHub Enterprise Cloud integration. */
+  enterpriseUrl?: InputMaybe<Scalars["String"]>;
   /** The avatar URL for the GitHub organization. */
   orgAvatarUrl?: InputMaybe<Scalars["String"]>;
   /** The GitHub organization's name. */
@@ -5541,6 +5558,8 @@ export type Initiative = Node & {
   owner?: Maybe<User>;
   /** Parent initiative associated with the initiative. */
   parentInitiative?: Maybe<Initiative>;
+  /** [Internal] Parent initiatives associated with the initiative. */
+  parentInitiatives: InitiativeConnection;
   /** Projects associated with the initiative. */
   projects: ProjectConnection;
   /** The initiative's unique URL slug. */
@@ -5615,6 +5634,18 @@ export type InitiativeLinksArgs = {
   includeArchived?: InputMaybe<Scalars["Boolean"]>;
   last?: InputMaybe<Scalars["Int"]>;
   orderBy?: InputMaybe<PaginationOrderBy>;
+};
+
+/** An initiative to group projects. */
+export type InitiativeParentInitiativesArgs = {
+  after?: InputMaybe<Scalars["String"]>;
+  before?: InputMaybe<Scalars["String"]>;
+  filter?: InputMaybe<InitiativeFilter>;
+  first?: InputMaybe<Scalars["Int"]>;
+  includeArchived?: InputMaybe<Scalars["Boolean"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+  orderBy?: InputMaybe<PaginationOrderBy>;
+  sort?: InputMaybe<Array<InitiativeSortInput>>;
 };
 
 /** An initiative to group projects. */
@@ -6394,6 +6425,8 @@ export type InitiativeUpdateWebhookPayload = {
   bodyData: Scalars["String"];
   /** The time at which the entity was created. */
   createdAt: Scalars["String"];
+  /** The diff between the current update and the previous one, formatted as markdown. */
+  diffMarkdown?: Maybe<Scalars["String"]>;
   /** The edited at timestamp of the initiative update. */
   editedAt: Scalars["String"];
   /** The health of the initiative update. */
@@ -7001,6 +7034,8 @@ export type Issue = Node & {
   recurringIssueTemplate?: Maybe<Template>;
   /** Relations associated with this issue. */
   relations: IssueRelationConnection;
+  /** Shared access metadata for this issue. */
+  sharedAccess: IssueSharedAccess;
   /** The time at which the issue's SLA will breach. */
   slaBreachesAt?: Maybe<Scalars["DateTime"]>;
   /** The time at which the issue's SLA will enter high risk state. */
@@ -8748,6 +8783,8 @@ export type IssueSearchResult = Node & {
   recurringIssueTemplate?: Maybe<Template>;
   /** Relations associated with this issue. */
   relations: IssueRelationConnection;
+  /** Shared access metadata for this issue. */
+  sharedAccess: IssueSharedAccess;
   /** The time at which the issue's SLA will breach. */
   slaBreachesAt?: Maybe<Scalars["DateTime"]>;
   /** The time at which the issue's SLA will enter high risk state. */
@@ -8951,6 +8988,18 @@ export type IssueSearchResultEdge = {
   /** Used in `before` and `after` args */
   cursor: Scalars["String"];
   node: IssueSearchResult;
+};
+
+export type IssueSharedAccess = {
+  __typename?: "IssueSharedAccess";
+  /** Whether this issue has been shared with users outside the team. */
+  isShared: Scalars["Boolean"];
+  /** The number of users this issue is shared with. */
+  sharedWithCount: Scalars["Int"];
+  /** Users this issue is shared with. */
+  sharedWithUsers: Array<User>;
+  /** Whether the viewer can access this issue only through issue sharing. */
+  viewerHasOnlySharedAccess: Scalars["Boolean"];
 };
 
 /** Payload for issue SLA webhook events. */
@@ -9569,7 +9618,7 @@ export type JiraSettingsInput = {
   projects: Array<JiraProjectDataInput>;
   /** Whether the user needs to provide setup information about the webhook to complete the integration setup. Only relevant for integrations that use a manual setup flow */
   setupPending?: InputMaybe<Scalars["Boolean"]>;
-  /** The status names per issue type, per project. */
+  /** Jira status names grouped by project, separated into issue statuses (non-Epic) and project statuses (Epic). Structure: projectId -> { issueStatuses: string[], projectStatuses: string[] } */
   statusNamesPerIssueType?: InputMaybe<Scalars["JSONObject"]>;
 };
 
@@ -9721,10 +9770,6 @@ export type Mutation = {
   agentSessionUpdateExternalUrl: AgentSessionPayload;
   /** Creates an integration api key for Airbyte to connect with Linear. */
   airbyteIntegrationConnect: IntegrationPayload;
-  /** Creates a new Asks web form settings. */
-  asksWebSettingsCreate: AsksWebSettingsPayload;
-  /** Updates Asks web form settings. */
-  asksWebSettingsUpdate: AsksWebSettingsPayload;
   /** Creates a new attachment, or updates existing if the same `url` and `issueId` is used. */
   attachmentCreate: AttachmentPayload;
   /** Deletes an issue attachment. */
@@ -10373,6 +10418,8 @@ export type Mutation = {
   timeScheduleUpdate: TimeSchedulePayload;
   /** Upsert an external time schedule. */
   timeScheduleUpsertExternal: TimeSchedulePayload;
+  /** Track an anonymous analytics event. */
+  trackAnonymousEvent: EventTrackingPayload;
   /** Creates a new triage responsibility. */
   triageResponsibilityCreate: TriageResponsibilityPayload;
   /** Deletes a triage responsibility. */
@@ -10459,17 +10506,6 @@ export type MutationAgentSessionUpdateExternalUrlArgs = {
 
 export type MutationAirbyteIntegrationConnectArgs = {
   input: AirbyteConfigurationInput;
-};
-
-export type MutationAsksWebSettingsCreateArgs = {
-  emailIntakeAddress?: InputMaybe<AsksWebSettingsEmailIntakeAddressInput>;
-  input: AsksWebSettingsCreateInput;
-};
-
-export type MutationAsksWebSettingsUpdateArgs = {
-  emailIntakeAddress?: InputMaybe<AsksWebSettingsEmailIntakeAddressInput>;
-  id: Scalars["String"];
-  input: AsksWebSettingsUpdateInput;
 };
 
 export type MutationAttachmentCreateArgs = {
@@ -11900,6 +11936,10 @@ export type MutationTimeScheduleUpdateArgs = {
 export type MutationTimeScheduleUpsertExternalArgs = {
   externalId: Scalars["String"];
   input: TimeScheduleUpdateInput;
+};
+
+export type MutationTrackAnonymousEventArgs = {
+  input: EventTrackingInput;
 };
 
 export type MutationTriageResponsibilityCreateArgs = {
@@ -14467,6 +14507,8 @@ export type Project = Node & {
   state: Scalars["String"];
   /** The status that the project is associated with. */
   status: ProjectStatus;
+  /** The external services the project is synced with. */
+  syncedWith?: Maybe<Array<ExternalEntityInfo>>;
   /** The estimated completion date of the project. */
   targetDate?: Maybe<Scalars["TimelessDate"]>;
   /** The resolution of the project's estimated completion date. */
@@ -15885,6 +15927,8 @@ export type ProjectSearchResult = Node & {
   state: Scalars["String"];
   /** The status that the project is associated with. */
   status: ProjectStatus;
+  /** The external services the project is synced with. */
+  syncedWith?: Maybe<Array<ExternalEntityInfo>>;
   /** The estimated completion date of the project. */
   targetDate?: Maybe<Scalars["TimelessDate"]>;
   /** The resolution of the project's estimated completion date. */
@@ -16524,6 +16568,8 @@ export type ProjectUpdateWebhookPayload = {
   bodyData: Scalars["String"];
   /** The time at which the entity was created. */
   createdAt: Scalars["String"];
+  /** The diff between the current update and the previous one, formatted as markdown. */
+  diffMarkdown?: Maybe<Scalars["String"]>;
   /** The edited at timestamp of the project update. */
   editedAt: Scalars["String"];
   /** The health of the project update. */
@@ -16675,6 +16721,8 @@ export type ProjectWebhookPayload = {
   status?: Maybe<ProjectStatusChildWebhookPayload>;
   /** The ID of the project status. */
   statusId: Scalars["String"];
+  /** The external services the project is synced with. */
+  syncedWith?: Maybe<Scalars["JSONObject"]>;
   /** The target date of the project. */
   targetDate?: Maybe<Scalars["String"]>;
   /** The resolution of the project's target date. */
@@ -16694,10 +16742,14 @@ export type PullRequest = Node & {
   __typename?: "PullRequest";
   /** The time at which the entity was archived. Null if the entity has not been archived. */
   archivedAt?: Maybe<Scalars["DateTime"]>;
+  /** [Internal] The checks associated with the pull request. */
+  checks: Array<PullRequestCheck>;
   /** [ALPHA] The commits associated with the pull request. */
   commits: Array<PullRequestCommit>;
   /** The time at which the entity was created. */
   createdAt: Scalars["DateTime"];
+  /** [Internal] The user who created the pull request. */
+  creator?: Maybe<User>;
   /** The unique identifier of the entity. */
   id: Scalars["ID"];
   /** The merge commit created when the PR was merged. */
@@ -16723,6 +16775,25 @@ export type PullRequest = Node & {
   updatedAt: Scalars["DateTime"];
   /** The URL of the pull request in the version control system. */
   url: Scalars["String"];
+};
+
+/** [ALPHA] A pull request check. */
+export type PullRequestCheck = {
+  __typename?: "PullRequestCheck";
+  /** The date/time at which when the check was completed. */
+  completedAt?: Maybe<Scalars["DateTime"]>;
+  /** Whether the check is required. */
+  isRequired?: Maybe<Scalars["Boolean"]>;
+  /** The name of the check. */
+  name: Scalars["String"];
+  /** The date/time at which when the check was started. */
+  startedAt?: Maybe<Scalars["DateTime"]>;
+  /** The status of the check. */
+  status: Scalars["String"];
+  /** The URL of the check. */
+  url?: Maybe<Scalars["String"]>;
+  /** The name of the workflow that triggered the check. */
+  workflowName?: Maybe<Scalars["String"]>;
 };
 
 /** [ALPHA] A pull request commit. */
@@ -16930,14 +17001,14 @@ export type Query = {
   agentActivity: AgentActivity;
   /** A specific agent session. */
   agentSession: AgentSession;
+  /** [Internal] Retrieves the coding agent sandbox for a given agent session ID. */
+  agentSessionSandbox?: Maybe<CodingAgentSandboxPayload>;
   /** All agent sessions. */
   agentSessions: AgentSessionConnection;
   /** Get basic information for an application. */
   applicationInfo: Application;
   /** [Internal] All archived teams of the organization. */
   archivedTeams: Array<Team>;
-  /** Asks web form settings by ID. */
-  asksWebSetting: AsksWebSettings;
   /**
    * One specific issue attachment.
    * [Deprecated] 'url' can no longer be used as the 'id' parameter. Use 'attachmentsForUrl' instead
@@ -17259,6 +17330,10 @@ export type QueryAgentSessionArgs = {
   id: Scalars["String"];
 };
 
+export type QueryAgentSessionSandboxArgs = {
+  agentSessionId: Scalars["String"];
+};
+
 export type QueryAgentSessionsArgs = {
   after?: InputMaybe<Scalars["String"]>;
   before?: InputMaybe<Scalars["String"]>;
@@ -17270,10 +17345,6 @@ export type QueryAgentSessionsArgs = {
 
 export type QueryApplicationInfoArgs = {
   clientId: Scalars["String"];
-};
-
-export type QueryAsksWebSettingArgs = {
-  id: Scalars["String"];
 };
 
 export type QueryAttachmentArgs = {
@@ -17887,6 +17958,7 @@ export type QueryReleaseStagesArgs = {
 export type QueryReleasesArgs = {
   after?: InputMaybe<Scalars["String"]>;
   before?: InputMaybe<Scalars["String"]>;
+  filter?: InputMaybe<ReleaseFilter>;
   first?: InputMaybe<Scalars["Int"]>;
   includeArchived?: InputMaybe<Scalars["Boolean"]>;
   last?: InputMaybe<Scalars["Int"]>;
@@ -18356,6 +18428,8 @@ export type ReleaseCollectionFilter = {
   id?: InputMaybe<IdComparator>;
   /** Comparator for the collection length. */
   length?: InputMaybe<NumberComparator>;
+  /** Comparator for the release name. */
+  name?: InputMaybe<StringComparator>;
   /** Compound filters, one of which need to be matched by the release. */
   or?: InputMaybe<Array<ReleaseCollectionFilter>>;
   /** Filters that the release's pipeline must satisfy. */
@@ -18366,6 +18440,8 @@ export type ReleaseCollectionFilter = {
   stage?: InputMaybe<ReleaseStageFilter>;
   /** Comparator for the updated at date. */
   updatedAt?: InputMaybe<DateComparator>;
+  /** Comparator for the release version. */
+  version?: InputMaybe<StringComparator>;
 };
 
 export type ReleaseCompleteInput = {
@@ -18403,7 +18479,7 @@ export type ReleaseCreateInput = {
   name: Scalars["String"];
   /** The identifier of the pipeline this release belongs to. */
   pipelineId: Scalars["String"];
-  /** The current stage of the release. Defaults to the first 'started' stage. */
+  /** The current stage of the release. Defaults to the first 'completed' stage for continuous pipelines, or the first 'started' stage for scheduled pipelines. */
   stageId?: InputMaybe<Scalars["String"]>;
   /** The estimated start date of the release. */
   startDate?: InputMaybe<Scalars["TimelessDate"]>;
@@ -18440,6 +18516,8 @@ export type ReleaseFilter = {
   createdAt?: InputMaybe<DateComparator>;
   /** Comparator for the identifier. */
   id?: InputMaybe<IdComparator>;
+  /** Comparator for the release name. */
+  name?: InputMaybe<StringComparator>;
   /** Compound filters, one of which need to be matched by the release. */
   or?: InputMaybe<Array<ReleaseFilter>>;
   /** Filters that the release's pipeline must satisfy. */
@@ -18448,6 +18526,8 @@ export type ReleaseFilter = {
   stage?: InputMaybe<ReleaseStageFilter>;
   /** Comparator for the updated at date. */
   updatedAt?: InputMaybe<DateComparator>;
+  /** Comparator for the release version. */
+  version?: InputMaybe<StringComparator>;
 };
 
 export type ReleasePayload = {
@@ -18554,6 +18634,8 @@ export type ReleasePipelineFilter = {
   createdAt?: InputMaybe<DateComparator>;
   /** Comparator for the identifier. */
   id?: InputMaybe<IdComparator>;
+  /** Comparator for the pipeline name. */
+  name?: InputMaybe<StringComparator>;
   /** Compound filters, one of which need to be matched by the pipeline. */
   or?: InputMaybe<Array<ReleasePipelineFilter>>;
   /** Comparator for the updated at date. */
@@ -18596,6 +18678,8 @@ export type ReleaseStage = Node & {
   color: Scalars["String"];
   /** The time at which the entity was created. */
   createdAt: Scalars["DateTime"];
+  /** Whether this stage is frozen. Only applicable to started type stages. */
+  frozen: Scalars["Boolean"];
   /** The unique identifier of the entity. */
   id: Scalars["ID"];
   /** The name of the stage. */
@@ -18646,6 +18730,8 @@ export type ReleaseStageConnection = {
 export type ReleaseStageCreateInput = {
   /** The UI color of the stage as a HEX string. */
   color: Scalars["String"];
+  /** Whether this stage is frozen. Only applicable to started stages. */
+  frozen?: InputMaybe<Scalars["Boolean"]>;
   /** The identifier in UUID v4 format. If none is provided, the backend will generate one. */
   id?: InputMaybe<Scalars["String"]>;
   /** The name of the stage. */
@@ -18718,12 +18804,12 @@ export type ReleaseStageTypeComparator = {
 export type ReleaseStageUpdateInput = {
   /** The UI color of the stage as a HEX string. */
   color?: InputMaybe<Scalars["String"]>;
+  /** Whether this stage is frozen. Only applicable to started stages. */
+  frozen?: InputMaybe<Scalars["Boolean"]>;
   /** The name of the stage. */
   name?: InputMaybe<Scalars["String"]>;
   /** The position of the stage. */
   position?: InputMaybe<Scalars["Float"]>;
-  /** The type of the stage. */
-  type?: InputMaybe<ReleaseStageType>;
 };
 
 /** The release data to sync. */
@@ -18732,12 +18818,6 @@ export type ReleaseSyncInput = {
   commitSha: Scalars["String"];
   /** Debug information for release creation diagnostics. */
   debugSink?: InputMaybe<ReleaseDebugSinkInput>;
-  /** The description of the release. */
-  description?: InputMaybe<Scalars["String"]>;
-  /** The identifier in UUID v4 format. If none is provided, the backend will generate one. */
-  id?: InputMaybe<Scalars["String"]>;
-  /** [DEPRECATED] Issue identifiers (e.g. ENG-123) to associate with this release. */
-  issueIdentifiers?: InputMaybe<Array<Scalars["String"]>>;
   /** Issue references (e.g. ENG-123) to associate with this release. */
   issueReferences?: InputMaybe<Array<IssueReferenceInput>>;
   /** The name of the release. */
@@ -18748,12 +18828,6 @@ export type ReleaseSyncInput = {
   pullRequestReferences?: InputMaybe<Array<PullRequestReferenceInput>>;
   /** Information about the source repository. */
   repository?: InputMaybe<RepositoryDataInput>;
-  /** The current stage of the release. Defaults to the first 'completed' stage. */
-  stageId?: InputMaybe<Scalars["String"]>;
-  /** The estimated start date of the release. */
-  startDate?: InputMaybe<Scalars["TimelessDate"]>;
-  /** The estimated completion date of the release. */
-  targetDate?: InputMaybe<Scalars["TimelessDate"]>;
   /** The version of the release. */
   version?: InputMaybe<Scalars["String"]>;
 };
@@ -18764,10 +18838,6 @@ export type ReleaseSyncInputBase = {
   commitSha: Scalars["String"];
   /** Debug information for release creation diagnostics. */
   debugSink?: InputMaybe<ReleaseDebugSinkInput>;
-  /** The description of the release. */
-  description?: InputMaybe<Scalars["String"]>;
-  /** The identifier in UUID v4 format. If none is provided, the backend will generate one. */
-  id?: InputMaybe<Scalars["String"]>;
   /** Issue references (e.g. ENG-123) to associate with this release. */
   issueReferences?: InputMaybe<Array<IssueReferenceInput>>;
   /** The name of the release. */
@@ -18776,12 +18846,6 @@ export type ReleaseSyncInputBase = {
   pullRequestReferences?: InputMaybe<Array<PullRequestReferenceInput>>;
   /** Information about the source repository. */
   repository?: InputMaybe<RepositoryDataInput>;
-  /** The current stage of the release. Defaults to the first 'completed' stage. */
-  stageId?: InputMaybe<Scalars["String"]>;
-  /** The estimated start date of the release. */
-  startDate?: InputMaybe<Scalars["TimelessDate"]>;
-  /** The estimated completion date of the release. */
-  targetDate?: InputMaybe<Scalars["TimelessDate"]>;
   /** The version of the release. */
   version?: InputMaybe<Scalars["String"]>;
 };
@@ -21563,6 +21627,15 @@ export type ViewPreferencesPayload = {
   viewPreferences: ViewPreferences;
 };
 
+/** A label group column configuration for the project list view. */
+export type ViewPreferencesProjectLabelGroupColumn = {
+  __typename?: "ViewPreferencesProjectLabelGroupColumn";
+  /** Whether the label group column is active. */
+  active: Scalars["Boolean"];
+  /** The identifier of the label group. */
+  id: Scalars["String"];
+};
+
 /** The type of view preferences (either user or organization level preferences). */
 export enum ViewPreferencesType {
   Organization = "organization",
@@ -21578,14 +21651,375 @@ export type ViewPreferencesUpdateInput = {
 
 export type ViewPreferencesValues = {
   __typename?: "ViewPreferencesValues";
+  /** Whether issues in closed columns should be ordered by recency. */
+  closedIssuesOrderedByRecency?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the custom view creation date field. */
+  customViewFieldDateCreated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the custom view updated date field. */
+  customViewFieldDateUpdated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the custom view owner field. */
+  customViewFieldOwner?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the custom view visibility field. */
+  customViewFieldVisibility?: Maybe<Scalars["Boolean"]>;
+  /** The custom views ordering. */
+  customViewsOrdering?: Maybe<Scalars["String"]>;
+  /** Whether to show the customer domains field. */
+  customerFieldDomains?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the customer owner field. */
+  customerFieldOwner?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the customer request count field. */
+  customerFieldRequestCount?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the customer revenue field. */
+  customerFieldRevenue?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the customer size field. */
+  customerFieldSize?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the customer source field. */
+  customerFieldSource?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the customer status field. */
+  customerFieldStatus?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the customer tier field. */
+  customerFieldTier?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue identifier field in the customer page. */
+  customerPageNeedsFieldIssueIdentifier?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue priority field in the customer page. */
+  customerPageNeedsFieldIssuePriority?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue status field in the customer page. */
+  customerPageNeedsFieldIssueStatus?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue due date field in the customer page. */
+  customerPageNeedsFieldIssueTargetDueDate?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show completed issues and projects in the customer page. */
+  customerPageNeedsShowCompletedIssuesAndProjects?: Maybe<Scalars["String"]>;
+  /** Whether to show important customer needs first. */
+  customerPageNeedsShowImportantFirst?: Maybe<Scalars["Boolean"]>;
+  /** The customer page needs view grouping. */
+  customerPageNeedsViewGrouping?: Maybe<Scalars["String"]>;
+  /** The customer page needs view ordering. */
+  customerPageNeedsViewOrdering?: Maybe<Scalars["String"]>;
+  /** The customers view ordering. */
+  customersViewOrdering?: Maybe<Scalars["String"]>;
+  /** Whether to show the dashboard creation date field. */
+  dashboardFieldDateCreated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the dashboard updated date field. */
+  dashboardFieldDateUpdated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the dashboard owner field. */
+  dashboardFieldOwner?: Maybe<Scalars["Boolean"]>;
+  /** The dashboards ordering. */
+  dashboardsOrdering?: Maybe<Scalars["String"]>;
+  /** Whether to show important embedded customer needs first. */
+  embeddedCustomerNeedsShowImportantFirst?: Maybe<Scalars["Boolean"]>;
+  /** The embedded customer needs view ordering. */
+  embeddedCustomerNeedsViewOrdering?: Maybe<Scalars["String"]>;
+  /** Whether to show the issue assignee field. */
+  fieldAssignee?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the customer request count field. */
+  fieldCustomerCount?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the customer revenue field. */
+  fieldCustomerRevenue?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the cycle field. */
+  fieldCycle?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue archived date field. */
+  fieldDateArchived?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue creation date field. */
+  fieldDateCreated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue last activity date field. */
+  fieldDateMyActivity?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue updated date field. */
+  fieldDateUpdated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the due date field. */
+  fieldDueDate?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue estimate field. */
+  fieldEstimate?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue identifier field. */
+  fieldId?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the labels field. */
+  fieldLabels?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the link count field. */
+  fieldLinkCount?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the milestone field. */
+  fieldMilestone?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show preview links. */
+  fieldPreviewLinks?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue priority field. */
+  fieldPriority?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project field. */
+  fieldProject?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the pull requests field. */
+  fieldPullRequests?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the release field. */
+  fieldRelease?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the Sentry issues field. */
+  fieldSentryIssues?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the SLA field. */
+  fieldSla?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the issue status field. */
+  fieldStatus?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the time in current status field. */
+  fieldTimeInCurrentStatus?: Maybe<Scalars["Boolean"]>;
+  /** List of column model IDs which should be hidden on a board. */
+  hiddenColumns?: Maybe<Array<Scalars["String"]>>;
+  /** List of row model IDs which should be hidden on a board. */
+  hiddenRows?: Maybe<Array<Scalars["String"]>>;
+  /** The inbox view ordering. */
+  inboxViewOrdering?: Maybe<Scalars["String"]>;
+  /** Whether to show the initiative activity field. */
+  initiativeFieldActivity?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the initiative description field. */
+  initiativeFieldDescription?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the initiative active projects health field. */
+  initiativeFieldHealth?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the initiative health field. */
+  initiativeFieldInitiativeHealth?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the initiative owner field. */
+  initiativeFieldOwner?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the initiative projects field. */
+  initiativeFieldProjects?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the initiative target date field. */
+  initiativeFieldTargetDate?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the initiative teams field. */
+  initiativeFieldTeams?: Maybe<Scalars["Boolean"]>;
+  /** The initiative grouping. */
+  initiativeGrouping?: Maybe<Scalars["String"]>;
+  /** The initiative ordering. */
+  initiativesViewOrdering?: Maybe<Scalars["String"]>;
   /** The issue grouping. */
   issueGrouping?: Maybe<Scalars["String"]>;
-  /** The issue sub grouping. */
+  /** The label group ID used for issue grouping. */
+  issueGroupingLabelGroupId?: Maybe<Scalars["String"]>;
+  /** How sub-issues should be nested and displayed. */
+  issueNesting?: Maybe<Scalars["String"]>;
+  /** The issue sub-grouping. */
   issueSubGrouping?: Maybe<Scalars["String"]>;
-  /** Whether to show completed issues. */
+  /** The label group ID used for issue sub-grouping. */
+  issueSubGroupingLabelGroupId?: Maybe<Scalars["String"]>;
+  /** The issue layout type. */
+  layout?: Maybe<Scalars["String"]>;
+  /** Whether to show the member joined date field. */
+  memberFieldJoined?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the member status field. */
+  memberFieldStatus?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the member teams field. */
+  memberFieldTeams?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show completed issues last in project customer needs. */
+  projectCustomerNeedsShowCompletedIssuesLast?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show important project customer needs first. */
+  projectCustomerNeedsShowImportantFirst?: Maybe<Scalars["Boolean"]>;
+  /** The project customer needs view grouping. */
+  projectCustomerNeedsViewGrouping?: Maybe<Scalars["String"]>;
+  /** The project customer needs view ordering. */
+  projectCustomerNeedsViewOrdering?: Maybe<Scalars["String"]>;
+  /** Whether to show the project activity field. */
+  projectFieldActivity?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project customer count field. */
+  projectFieldCustomerCount?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project customer revenue field. */
+  projectFieldCustomerRevenue?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project completion date field. */
+  projectFieldDateCompleted?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project creation date field. */
+  projectFieldDateCreated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project updated date field. */
+  projectFieldDateUpdated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project description field. */
+  projectFieldDescription?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project description field on the board. */
+  projectFieldDescriptionBoard?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project health field. */
+  projectFieldHealth?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project health field on the timeline. */
+  projectFieldHealthTimeline?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project initiatives field. */
+  projectFieldInitiatives?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project labels field. */
+  projectFieldLabels?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project lead field. */
+  projectFieldLead?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project lead field on the timeline. */
+  projectFieldLeadTimeline?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project members field. */
+  projectFieldMembers?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project members field on the board. */
+  projectFieldMembersBoard?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project members field on the list. */
+  projectFieldMembersList?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project members field on the timeline. */
+  projectFieldMembersTimeline?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project milestone field. */
+  projectFieldMilestone?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project milestone field on the timeline. */
+  projectFieldMilestoneTimeline?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project predictions field. */
+  projectFieldPredictions?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project predictions field on the timeline. */
+  projectFieldPredictionsTimeline?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project priority field. */
+  projectFieldPriority?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project relations field. */
+  projectFieldRelations?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project relations field on the timeline. */
+  projectFieldRelationsTimeline?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project roadmaps field. */
+  projectFieldRoadmaps?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project roadmaps field on the board. */
+  projectFieldRoadmapsBoard?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project roadmaps field on the list. */
+  projectFieldRoadmapsList?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project roadmaps field on the timeline. */
+  projectFieldRoadmapsTimeline?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project rollout stage field. */
+  projectFieldRolloutStage?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project start date field. */
+  projectFieldStartDate?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project status field. */
+  projectFieldStatus?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project status field on the timeline. */
+  projectFieldStatusTimeline?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project target date field. */
+  projectFieldTargetDate?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project teams field. */
+  projectFieldTeams?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project teams field on the board. */
+  projectFieldTeamsBoard?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project teams field on the list. */
+  projectFieldTeamsList?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the project teams field on the timeline. */
+  projectFieldTeamsTimeline?: Maybe<Scalars["Boolean"]>;
+  /** The ordering of project groups. */
+  projectGroupOrdering?: Maybe<Scalars["String"]>;
+  /** The project grouping. */
+  projectGrouping?: Maybe<Scalars["String"]>;
+  /** The date resolution when grouping projects by date. */
+  projectGroupingDateResolution?: Maybe<Scalars["String"]>;
+  /** The label group ID used for project grouping. */
+  projectGroupingLabelGroupId?: Maybe<Scalars["String"]>;
+  /** The project label group columns configuration. */
+  projectLabelGroupColumns?: Maybe<Array<ViewPreferencesProjectLabelGroupColumn>>;
+  /** The project layout type. */
+  projectLayout?: Maybe<Scalars["String"]>;
+  /** How to show empty project groups. */
+  projectShowEmptyGroups?: Maybe<Scalars["String"]>;
+  /** How to show empty project groups on the board layout. */
+  projectShowEmptyGroupsBoard?: Maybe<Scalars["String"]>;
+  /** How to show empty project groups on the list layout. */
+  projectShowEmptyGroupsList?: Maybe<Scalars["String"]>;
+  /** How to show empty project groups on the timeline layout. */
+  projectShowEmptyGroupsTimeline?: Maybe<Scalars["String"]>;
+  /** How to show empty project sub-groups. */
+  projectShowEmptySubGroups?: Maybe<Scalars["String"]>;
+  /** How to show empty project sub-groups on the board layout. */
+  projectShowEmptySubGroupsBoard?: Maybe<Scalars["String"]>;
+  /** How to show empty project sub-groups on the list layout. */
+  projectShowEmptySubGroupsList?: Maybe<Scalars["String"]>;
+  /** How to show empty project sub-groups on the timeline layout. */
+  projectShowEmptySubGroupsTimeline?: Maybe<Scalars["String"]>;
+  /** The project sub-grouping. */
+  projectSubGrouping?: Maybe<Scalars["String"]>;
+  /** The label group ID used for project sub-grouping. */
+  projectSubGroupingLabelGroupId?: Maybe<Scalars["String"]>;
+  /** The project ordering. */
+  projectViewOrdering?: Maybe<Scalars["String"]>;
+  /**
+   * The zoom level for the timeline view.
+   * @deprecated Use timelineZoomScale instead.
+   */
+  projectZoomLevel?: Maybe<Scalars["String"]>;
+  /** The release pipelines view ordering. */
+  releasePipelinesViewOrdering?: Maybe<Scalars["String"]>;
+  /** Whether to show the review avatar field. */
+  reviewFieldAvatar?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the review checks field. */
+  reviewFieldChecks?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the review identifier field. */
+  reviewFieldIdentifier?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the review preview links field. */
+  reviewFieldPreviewLinks?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the review repository field. */
+  reviewFieldRepository?: Maybe<Scalars["Boolean"]>;
+  /** The review grouping. */
+  reviewGrouping?: Maybe<Scalars["String"]>;
+  /** The review view ordering. */
+  reviewViewOrdering?: Maybe<Scalars["String"]>;
+  /** The search result type filter. */
+  searchResultType?: Maybe<Scalars["String"]>;
+  /** The search view ordering. */
+  searchViewOrdering?: Maybe<Scalars["String"]>;
+  /** Whether to show archived items. */
+  showArchivedItems?: Maybe<Scalars["Boolean"]>;
+  /** Whether completed agent sessions are shown and for how long. */
+  showCompletedAgentSessions?: Maybe<Scalars["String"]>;
+  /** Whether completed issues are shown and for how long. */
   showCompletedIssues?: Maybe<Scalars["String"]>;
+  /** Whether completed projects are shown and for how long. */
+  showCompletedProjects?: Maybe<Scalars["String"]>;
+  /** Whether completed reviews are shown and for how long. */
+  showCompletedReviews?: Maybe<Scalars["String"]>;
+  /** Whether to show draft reviews. */
+  showDraftReviews?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show empty groups. */
+  showEmptyGroups?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show empty groups on the board layout. */
+  showEmptyGroupsBoard?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show empty groups on the list layout. */
+  showEmptyGroupsList?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show empty sub-groups. */
+  showEmptySubGroups?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show empty sub-groups on the board layout. */
+  showEmptySubGroupsBoard?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show empty sub-groups on the list layout. */
+  showEmptySubGroupsList?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show sub-initiatives nested. */
+  showNestedInitiatives?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show parent issues for sub-issues. */
+  showParents?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show read items. */
+  showReadItems?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show snoozed items. */
+  showSnoozedItems?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show sub-initiative projects. */
+  showSubInitiativeProjects?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show sub-issues. */
+  showSubIssues?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show sub-team issues. */
+  showSubTeamIssues?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show sub-team projects. */
+  showSubTeamProjects?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show supervised issues. */
+  showSupervisedIssues?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show triage issues. */
+  showTriageIssues?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show unread items first. */
+  showUnreadItemsFirst?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the team cycle field. */
+  teamFieldCycle?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the team creation date field. */
+  teamFieldDateCreated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the team updated date field. */
+  teamFieldDateUpdated?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the team identifier field. */
+  teamFieldIdentifier?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the team members field. */
+  teamFieldMembers?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the team membership field. */
+  teamFieldMembership?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the team owner field. */
+  teamFieldOwner?: Maybe<Scalars["Boolean"]>;
+  /** Whether to show the team projects field. */
+  teamFieldProjects?: Maybe<Scalars["Boolean"]>;
+  /** The team view ordering. */
+  teamViewOrdering?: Maybe<Scalars["String"]>;
+  /** Selected team IDs to show cycles for in timeline chronology bar. */
+  timelineChronologyShowCycleTeamIds?: Maybe<Array<Scalars["String"]>>;
+  /** Whether to show week numbers in timeline chronology bar. */
+  timelineChronologyShowWeekNumbers?: Maybe<Scalars["Boolean"]>;
+  /** The zoom scale for the timeline view. */
+  timelineZoomScale?: Maybe<Scalars["Float"]>;
+  /** The triage view ordering. */
+  triageViewOrdering?: Maybe<Scalars["String"]>;
   /** The issue ordering. */
   viewOrdering?: Maybe<Scalars["String"]>;
+  /** The direction of the issue ordering. */
+  viewOrderingDirection?: Maybe<Scalars["String"]>;
+  /** The workspace members view ordering. */
+  workspaceMembersViewOrdering?: Maybe<Scalars["String"]>;
 };
 
 /** The client view this custom view is targeting. */
@@ -21597,6 +22031,7 @@ export enum ViewType {
   Backlog = "backlog",
   Board = "board",
   CompletedCycle = "completedCycle",
+  ContinuousPipelineReleases = "continuousPipelineReleases",
   CreatedReviews = "createdReviews",
   CustomView = "customView",
   CustomViews = "customViews",
@@ -22115,6 +22550,8 @@ export type ZendeskSettingsInput = {
   disableCustomerRequestsAutoCreation?: InputMaybe<Scalars["Boolean"]>;
   /** Whether Linear Agent should be enabled for this integration. */
   enableAiIntake?: InputMaybe<Scalars["Boolean"]>;
+  /** The host mappings from Zendesk brands. */
+  hostMappings?: InputMaybe<Array<Scalars["String"]>>;
   /** Whether an internal message should be added when someone comments on an issue. */
   sendNoteOnComment?: InputMaybe<Scalars["Boolean"]>;
   /** Whether an internal message should be added when a Linear issue changes status (for status types except completed or canceled). */
@@ -22419,8 +22856,198 @@ export type CustomViewFragment = { __typename: "CustomView" } & Pick<
     viewPreferencesValues?: Maybe<
       { __typename: "ViewPreferencesValues" } & Pick<
         ViewPreferencesValues,
-        "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-      >
+        | "issueNesting"
+        | "projectShowEmptyGroupsBoard"
+        | "projectShowEmptyGroupsList"
+        | "projectShowEmptyGroupsTimeline"
+        | "projectShowEmptyGroups"
+        | "projectShowEmptySubGroupsBoard"
+        | "projectShowEmptySubGroupsList"
+        | "projectShowEmptySubGroupsTimeline"
+        | "projectShowEmptySubGroups"
+        | "hiddenColumns"
+        | "hiddenRows"
+        | "timelineChronologyShowCycleTeamIds"
+        | "customViewsOrdering"
+        | "customerPageNeedsViewGrouping"
+        | "customerPageNeedsViewOrdering"
+        | "customersViewOrdering"
+        | "dashboardsOrdering"
+        | "projectGroupingDateResolution"
+        | "viewOrderingDirection"
+        | "embeddedCustomerNeedsViewOrdering"
+        | "inboxViewOrdering"
+        | "initiativeGrouping"
+        | "initiativesViewOrdering"
+        | "issueGrouping"
+        | "layout"
+        | "viewOrdering"
+        | "issueSubGrouping"
+        | "issueGroupingLabelGroupId"
+        | "issueSubGroupingLabelGroupId"
+        | "projectGroupingLabelGroupId"
+        | "projectSubGroupingLabelGroupId"
+        | "projectGroupOrdering"
+        | "projectCustomerNeedsViewGrouping"
+        | "projectCustomerNeedsViewOrdering"
+        | "projectGrouping"
+        | "projectLayout"
+        | "projectViewOrdering"
+        | "projectSubGrouping"
+        | "releasePipelinesViewOrdering"
+        | "reviewGrouping"
+        | "reviewViewOrdering"
+        | "searchResultType"
+        | "searchViewOrdering"
+        | "teamViewOrdering"
+        | "triageViewOrdering"
+        | "workspaceMembersViewOrdering"
+        | "projectZoomLevel"
+        | "timelineZoomScale"
+        | "showCompletedAgentSessions"
+        | "showCompletedIssues"
+        | "showCompletedProjects"
+        | "showCompletedReviews"
+        | "closedIssuesOrderedByRecency"
+        | "showArchivedItems"
+        | "customerPageNeedsShowCompletedIssuesAndProjects"
+        | "projectCustomerNeedsShowCompletedIssuesLast"
+        | "showDraftReviews"
+        | "showEmptyGroupsBoard"
+        | "showEmptyGroupsList"
+        | "showEmptyGroups"
+        | "showEmptySubGroupsBoard"
+        | "showEmptySubGroupsList"
+        | "showEmptySubGroups"
+        | "customerPageNeedsShowImportantFirst"
+        | "embeddedCustomerNeedsShowImportantFirst"
+        | "projectCustomerNeedsShowImportantFirst"
+        | "showParents"
+        | "fieldPreviewLinks"
+        | "showReadItems"
+        | "showSnoozedItems"
+        | "showSubInitiativeProjects"
+        | "showNestedInitiatives"
+        | "showSubIssues"
+        | "showSubTeamIssues"
+        | "showSubTeamProjects"
+        | "showSupervisedIssues"
+        | "fieldSla"
+        | "fieldSentryIssues"
+        | "customViewFieldDateCreated"
+        | "customViewFieldOwner"
+        | "customViewFieldDateUpdated"
+        | "customViewFieldVisibility"
+        | "customerFieldDomains"
+        | "customerFieldOwner"
+        | "customerFieldRequestCount"
+        | "fieldCustomerCount"
+        | "customerFieldRevenue"
+        | "fieldCustomerRevenue"
+        | "customerFieldSize"
+        | "customerFieldSource"
+        | "customerFieldStatus"
+        | "customerFieldTier"
+        | "fieldCycle"
+        | "dashboardFieldDateCreated"
+        | "dashboardFieldOwner"
+        | "dashboardFieldDateUpdated"
+        | "fieldDueDate"
+        | "initiativeFieldHealth"
+        | "initiativeFieldActivity"
+        | "initiativeFieldDescription"
+        | "initiativeFieldInitiativeHealth"
+        | "initiativeFieldOwner"
+        | "initiativeFieldProjects"
+        | "initiativeFieldTargetDate"
+        | "initiativeFieldTeams"
+        | "fieldDateArchived"
+        | "fieldAssignee"
+        | "fieldDateCreated"
+        | "customerPageNeedsFieldIssueTargetDueDate"
+        | "fieldEstimate"
+        | "customerPageNeedsFieldIssueIdentifier"
+        | "fieldId"
+        | "fieldDateMyActivity"
+        | "customerPageNeedsFieldIssuePriority"
+        | "fieldPriority"
+        | "customerPageNeedsFieldIssueStatus"
+        | "fieldStatus"
+        | "fieldDateUpdated"
+        | "fieldLabels"
+        | "fieldLinkCount"
+        | "memberFieldJoined"
+        | "memberFieldStatus"
+        | "memberFieldTeams"
+        | "fieldMilestone"
+        | "projectFieldActivity"
+        | "projectFieldDateCompleted"
+        | "projectFieldDateCreated"
+        | "projectFieldCustomerCount"
+        | "projectFieldCustomerRevenue"
+        | "projectFieldDescriptionBoard"
+        | "projectFieldDescription"
+        | "fieldProject"
+        | "projectFieldHealthTimeline"
+        | "projectFieldHealth"
+        | "projectFieldInitiatives"
+        | "projectFieldLabels"
+        | "projectFieldLeadTimeline"
+        | "projectFieldLead"
+        | "projectFieldMembersBoard"
+        | "projectFieldMembersList"
+        | "projectFieldMembersTimeline"
+        | "projectFieldMembers"
+        | "projectFieldMilestoneTimeline"
+        | "projectFieldMilestone"
+        | "projectFieldPredictionsTimeline"
+        | "projectFieldPredictions"
+        | "projectFieldPriority"
+        | "projectFieldRelationsTimeline"
+        | "projectFieldRelations"
+        | "projectFieldRoadmapsBoard"
+        | "projectFieldRoadmapsList"
+        | "projectFieldRoadmapsTimeline"
+        | "projectFieldRoadmaps"
+        | "projectFieldRolloutStage"
+        | "projectFieldStartDate"
+        | "projectFieldStatusTimeline"
+        | "projectFieldStatus"
+        | "projectFieldTargetDate"
+        | "projectFieldTeamsBoard"
+        | "projectFieldTeamsList"
+        | "projectFieldTeamsTimeline"
+        | "projectFieldTeams"
+        | "projectFieldDateUpdated"
+        | "fieldPullRequests"
+        | "fieldRelease"
+        | "reviewFieldAvatar"
+        | "reviewFieldChecks"
+        | "reviewFieldIdentifier"
+        | "reviewFieldPreviewLinks"
+        | "reviewFieldRepository"
+        | "teamFieldDateCreated"
+        | "teamFieldCycle"
+        | "teamFieldIdentifier"
+        | "teamFieldMembers"
+        | "teamFieldMembership"
+        | "teamFieldOwner"
+        | "teamFieldProjects"
+        | "teamFieldDateUpdated"
+        | "fieldTimeInCurrentStatus"
+        | "showTriageIssues"
+        | "showUnreadItemsFirst"
+        | "timelineChronologyShowWeekNumbers"
+      > & {
+          projectLabelGroupColumns?: Maybe<
+            Array<
+              { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                ViewPreferencesProjectLabelGroupColumn,
+                "id" | "active"
+              >
+            >
+          >;
+        }
     >;
     userViewPreferences?: Maybe<
       { __typename: "ViewPreferences" } & Pick<
@@ -22429,8 +23056,198 @@ export type CustomViewFragment = { __typename: "CustomView" } & Pick<
       > & {
           preferences: { __typename: "ViewPreferencesValues" } & Pick<
             ViewPreferencesValues,
-            "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-          >;
+            | "issueNesting"
+            | "projectShowEmptyGroupsBoard"
+            | "projectShowEmptyGroupsList"
+            | "projectShowEmptyGroupsTimeline"
+            | "projectShowEmptyGroups"
+            | "projectShowEmptySubGroupsBoard"
+            | "projectShowEmptySubGroupsList"
+            | "projectShowEmptySubGroupsTimeline"
+            | "projectShowEmptySubGroups"
+            | "hiddenColumns"
+            | "hiddenRows"
+            | "timelineChronologyShowCycleTeamIds"
+            | "customViewsOrdering"
+            | "customerPageNeedsViewGrouping"
+            | "customerPageNeedsViewOrdering"
+            | "customersViewOrdering"
+            | "dashboardsOrdering"
+            | "projectGroupingDateResolution"
+            | "viewOrderingDirection"
+            | "embeddedCustomerNeedsViewOrdering"
+            | "inboxViewOrdering"
+            | "initiativeGrouping"
+            | "initiativesViewOrdering"
+            | "issueGrouping"
+            | "layout"
+            | "viewOrdering"
+            | "issueSubGrouping"
+            | "issueGroupingLabelGroupId"
+            | "issueSubGroupingLabelGroupId"
+            | "projectGroupingLabelGroupId"
+            | "projectSubGroupingLabelGroupId"
+            | "projectGroupOrdering"
+            | "projectCustomerNeedsViewGrouping"
+            | "projectCustomerNeedsViewOrdering"
+            | "projectGrouping"
+            | "projectLayout"
+            | "projectViewOrdering"
+            | "projectSubGrouping"
+            | "releasePipelinesViewOrdering"
+            | "reviewGrouping"
+            | "reviewViewOrdering"
+            | "searchResultType"
+            | "searchViewOrdering"
+            | "teamViewOrdering"
+            | "triageViewOrdering"
+            | "workspaceMembersViewOrdering"
+            | "projectZoomLevel"
+            | "timelineZoomScale"
+            | "showCompletedAgentSessions"
+            | "showCompletedIssues"
+            | "showCompletedProjects"
+            | "showCompletedReviews"
+            | "closedIssuesOrderedByRecency"
+            | "showArchivedItems"
+            | "customerPageNeedsShowCompletedIssuesAndProjects"
+            | "projectCustomerNeedsShowCompletedIssuesLast"
+            | "showDraftReviews"
+            | "showEmptyGroupsBoard"
+            | "showEmptyGroupsList"
+            | "showEmptyGroups"
+            | "showEmptySubGroupsBoard"
+            | "showEmptySubGroupsList"
+            | "showEmptySubGroups"
+            | "customerPageNeedsShowImportantFirst"
+            | "embeddedCustomerNeedsShowImportantFirst"
+            | "projectCustomerNeedsShowImportantFirst"
+            | "showParents"
+            | "fieldPreviewLinks"
+            | "showReadItems"
+            | "showSnoozedItems"
+            | "showSubInitiativeProjects"
+            | "showNestedInitiatives"
+            | "showSubIssues"
+            | "showSubTeamIssues"
+            | "showSubTeamProjects"
+            | "showSupervisedIssues"
+            | "fieldSla"
+            | "fieldSentryIssues"
+            | "customViewFieldDateCreated"
+            | "customViewFieldOwner"
+            | "customViewFieldDateUpdated"
+            | "customViewFieldVisibility"
+            | "customerFieldDomains"
+            | "customerFieldOwner"
+            | "customerFieldRequestCount"
+            | "fieldCustomerCount"
+            | "customerFieldRevenue"
+            | "fieldCustomerRevenue"
+            | "customerFieldSize"
+            | "customerFieldSource"
+            | "customerFieldStatus"
+            | "customerFieldTier"
+            | "fieldCycle"
+            | "dashboardFieldDateCreated"
+            | "dashboardFieldOwner"
+            | "dashboardFieldDateUpdated"
+            | "fieldDueDate"
+            | "initiativeFieldHealth"
+            | "initiativeFieldActivity"
+            | "initiativeFieldDescription"
+            | "initiativeFieldInitiativeHealth"
+            | "initiativeFieldOwner"
+            | "initiativeFieldProjects"
+            | "initiativeFieldTargetDate"
+            | "initiativeFieldTeams"
+            | "fieldDateArchived"
+            | "fieldAssignee"
+            | "fieldDateCreated"
+            | "customerPageNeedsFieldIssueTargetDueDate"
+            | "fieldEstimate"
+            | "customerPageNeedsFieldIssueIdentifier"
+            | "fieldId"
+            | "fieldDateMyActivity"
+            | "customerPageNeedsFieldIssuePriority"
+            | "fieldPriority"
+            | "customerPageNeedsFieldIssueStatus"
+            | "fieldStatus"
+            | "fieldDateUpdated"
+            | "fieldLabels"
+            | "fieldLinkCount"
+            | "memberFieldJoined"
+            | "memberFieldStatus"
+            | "memberFieldTeams"
+            | "fieldMilestone"
+            | "projectFieldActivity"
+            | "projectFieldDateCompleted"
+            | "projectFieldDateCreated"
+            | "projectFieldCustomerCount"
+            | "projectFieldCustomerRevenue"
+            | "projectFieldDescriptionBoard"
+            | "projectFieldDescription"
+            | "fieldProject"
+            | "projectFieldHealthTimeline"
+            | "projectFieldHealth"
+            | "projectFieldInitiatives"
+            | "projectFieldLabels"
+            | "projectFieldLeadTimeline"
+            | "projectFieldLead"
+            | "projectFieldMembersBoard"
+            | "projectFieldMembersList"
+            | "projectFieldMembersTimeline"
+            | "projectFieldMembers"
+            | "projectFieldMilestoneTimeline"
+            | "projectFieldMilestone"
+            | "projectFieldPredictionsTimeline"
+            | "projectFieldPredictions"
+            | "projectFieldPriority"
+            | "projectFieldRelationsTimeline"
+            | "projectFieldRelations"
+            | "projectFieldRoadmapsBoard"
+            | "projectFieldRoadmapsList"
+            | "projectFieldRoadmapsTimeline"
+            | "projectFieldRoadmaps"
+            | "projectFieldRolloutStage"
+            | "projectFieldStartDate"
+            | "projectFieldStatusTimeline"
+            | "projectFieldStatus"
+            | "projectFieldTargetDate"
+            | "projectFieldTeamsBoard"
+            | "projectFieldTeamsList"
+            | "projectFieldTeamsTimeline"
+            | "projectFieldTeams"
+            | "projectFieldDateUpdated"
+            | "fieldPullRequests"
+            | "fieldRelease"
+            | "reviewFieldAvatar"
+            | "reviewFieldChecks"
+            | "reviewFieldIdentifier"
+            | "reviewFieldPreviewLinks"
+            | "reviewFieldRepository"
+            | "teamFieldDateCreated"
+            | "teamFieldCycle"
+            | "teamFieldIdentifier"
+            | "teamFieldMembers"
+            | "teamFieldMembership"
+            | "teamFieldOwner"
+            | "teamFieldProjects"
+            | "teamFieldDateUpdated"
+            | "fieldTimeInCurrentStatus"
+            | "showTriageIssues"
+            | "showUnreadItemsFirst"
+            | "timelineChronologyShowWeekNumbers"
+          > & {
+              projectLabelGroupColumns?: Maybe<
+                Array<
+                  { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                    ViewPreferencesProjectLabelGroupColumn,
+                    "id" | "active"
+                  >
+                >
+              >;
+            };
         }
     >;
     organizationViewPreferences?: Maybe<
@@ -22440,8 +23257,198 @@ export type CustomViewFragment = { __typename: "CustomView" } & Pick<
       > & {
           preferences: { __typename: "ViewPreferencesValues" } & Pick<
             ViewPreferencesValues,
-            "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-          >;
+            | "issueNesting"
+            | "projectShowEmptyGroupsBoard"
+            | "projectShowEmptyGroupsList"
+            | "projectShowEmptyGroupsTimeline"
+            | "projectShowEmptyGroups"
+            | "projectShowEmptySubGroupsBoard"
+            | "projectShowEmptySubGroupsList"
+            | "projectShowEmptySubGroupsTimeline"
+            | "projectShowEmptySubGroups"
+            | "hiddenColumns"
+            | "hiddenRows"
+            | "timelineChronologyShowCycleTeamIds"
+            | "customViewsOrdering"
+            | "customerPageNeedsViewGrouping"
+            | "customerPageNeedsViewOrdering"
+            | "customersViewOrdering"
+            | "dashboardsOrdering"
+            | "projectGroupingDateResolution"
+            | "viewOrderingDirection"
+            | "embeddedCustomerNeedsViewOrdering"
+            | "inboxViewOrdering"
+            | "initiativeGrouping"
+            | "initiativesViewOrdering"
+            | "issueGrouping"
+            | "layout"
+            | "viewOrdering"
+            | "issueSubGrouping"
+            | "issueGroupingLabelGroupId"
+            | "issueSubGroupingLabelGroupId"
+            | "projectGroupingLabelGroupId"
+            | "projectSubGroupingLabelGroupId"
+            | "projectGroupOrdering"
+            | "projectCustomerNeedsViewGrouping"
+            | "projectCustomerNeedsViewOrdering"
+            | "projectGrouping"
+            | "projectLayout"
+            | "projectViewOrdering"
+            | "projectSubGrouping"
+            | "releasePipelinesViewOrdering"
+            | "reviewGrouping"
+            | "reviewViewOrdering"
+            | "searchResultType"
+            | "searchViewOrdering"
+            | "teamViewOrdering"
+            | "triageViewOrdering"
+            | "workspaceMembersViewOrdering"
+            | "projectZoomLevel"
+            | "timelineZoomScale"
+            | "showCompletedAgentSessions"
+            | "showCompletedIssues"
+            | "showCompletedProjects"
+            | "showCompletedReviews"
+            | "closedIssuesOrderedByRecency"
+            | "showArchivedItems"
+            | "customerPageNeedsShowCompletedIssuesAndProjects"
+            | "projectCustomerNeedsShowCompletedIssuesLast"
+            | "showDraftReviews"
+            | "showEmptyGroupsBoard"
+            | "showEmptyGroupsList"
+            | "showEmptyGroups"
+            | "showEmptySubGroupsBoard"
+            | "showEmptySubGroupsList"
+            | "showEmptySubGroups"
+            | "customerPageNeedsShowImportantFirst"
+            | "embeddedCustomerNeedsShowImportantFirst"
+            | "projectCustomerNeedsShowImportantFirst"
+            | "showParents"
+            | "fieldPreviewLinks"
+            | "showReadItems"
+            | "showSnoozedItems"
+            | "showSubInitiativeProjects"
+            | "showNestedInitiatives"
+            | "showSubIssues"
+            | "showSubTeamIssues"
+            | "showSubTeamProjects"
+            | "showSupervisedIssues"
+            | "fieldSla"
+            | "fieldSentryIssues"
+            | "customViewFieldDateCreated"
+            | "customViewFieldOwner"
+            | "customViewFieldDateUpdated"
+            | "customViewFieldVisibility"
+            | "customerFieldDomains"
+            | "customerFieldOwner"
+            | "customerFieldRequestCount"
+            | "fieldCustomerCount"
+            | "customerFieldRevenue"
+            | "fieldCustomerRevenue"
+            | "customerFieldSize"
+            | "customerFieldSource"
+            | "customerFieldStatus"
+            | "customerFieldTier"
+            | "fieldCycle"
+            | "dashboardFieldDateCreated"
+            | "dashboardFieldOwner"
+            | "dashboardFieldDateUpdated"
+            | "fieldDueDate"
+            | "initiativeFieldHealth"
+            | "initiativeFieldActivity"
+            | "initiativeFieldDescription"
+            | "initiativeFieldInitiativeHealth"
+            | "initiativeFieldOwner"
+            | "initiativeFieldProjects"
+            | "initiativeFieldTargetDate"
+            | "initiativeFieldTeams"
+            | "fieldDateArchived"
+            | "fieldAssignee"
+            | "fieldDateCreated"
+            | "customerPageNeedsFieldIssueTargetDueDate"
+            | "fieldEstimate"
+            | "customerPageNeedsFieldIssueIdentifier"
+            | "fieldId"
+            | "fieldDateMyActivity"
+            | "customerPageNeedsFieldIssuePriority"
+            | "fieldPriority"
+            | "customerPageNeedsFieldIssueStatus"
+            | "fieldStatus"
+            | "fieldDateUpdated"
+            | "fieldLabels"
+            | "fieldLinkCount"
+            | "memberFieldJoined"
+            | "memberFieldStatus"
+            | "memberFieldTeams"
+            | "fieldMilestone"
+            | "projectFieldActivity"
+            | "projectFieldDateCompleted"
+            | "projectFieldDateCreated"
+            | "projectFieldCustomerCount"
+            | "projectFieldCustomerRevenue"
+            | "projectFieldDescriptionBoard"
+            | "projectFieldDescription"
+            | "fieldProject"
+            | "projectFieldHealthTimeline"
+            | "projectFieldHealth"
+            | "projectFieldInitiatives"
+            | "projectFieldLabels"
+            | "projectFieldLeadTimeline"
+            | "projectFieldLead"
+            | "projectFieldMembersBoard"
+            | "projectFieldMembersList"
+            | "projectFieldMembersTimeline"
+            | "projectFieldMembers"
+            | "projectFieldMilestoneTimeline"
+            | "projectFieldMilestone"
+            | "projectFieldPredictionsTimeline"
+            | "projectFieldPredictions"
+            | "projectFieldPriority"
+            | "projectFieldRelationsTimeline"
+            | "projectFieldRelations"
+            | "projectFieldRoadmapsBoard"
+            | "projectFieldRoadmapsList"
+            | "projectFieldRoadmapsTimeline"
+            | "projectFieldRoadmaps"
+            | "projectFieldRolloutStage"
+            | "projectFieldStartDate"
+            | "projectFieldStatusTimeline"
+            | "projectFieldStatus"
+            | "projectFieldTargetDate"
+            | "projectFieldTeamsBoard"
+            | "projectFieldTeamsList"
+            | "projectFieldTeamsTimeline"
+            | "projectFieldTeams"
+            | "projectFieldDateUpdated"
+            | "fieldPullRequests"
+            | "fieldRelease"
+            | "reviewFieldAvatar"
+            | "reviewFieldChecks"
+            | "reviewFieldIdentifier"
+            | "reviewFieldPreviewLinks"
+            | "reviewFieldRepository"
+            | "teamFieldDateCreated"
+            | "teamFieldCycle"
+            | "teamFieldIdentifier"
+            | "teamFieldMembers"
+            | "teamFieldMembership"
+            | "teamFieldOwner"
+            | "teamFieldProjects"
+            | "teamFieldDateUpdated"
+            | "fieldTimeInCurrentStatus"
+            | "showTriageIssues"
+            | "showUnreadItemsFirst"
+            | "timelineChronologyShowWeekNumbers"
+          > & {
+              projectLabelGroupColumns?: Maybe<
+                Array<
+                  { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                    ViewPreferencesProjectLabelGroupColumn,
+                    "id" | "active"
+                  >
+                >
+              >;
+            };
         }
     >;
     team?: Maybe<{ __typename?: "Team" } & Pick<Team, "id">>;
@@ -23823,6 +24830,10 @@ export type InitiativeHistoryFragment = { __typename: "InitiativeHistory" } & Pi
   "entries" | "updatedAt" | "archivedAt" | "createdAt" | "id"
 > & { initiative: { __typename?: "Initiative" } & Pick<Initiative, "id"> };
 
+export type ViewPreferencesProjectLabelGroupColumnFragment = {
+  __typename: "ViewPreferencesProjectLabelGroupColumn";
+} & Pick<ViewPreferencesProjectLabelGroupColumn, "id" | "active">;
+
 export type LabelNotificationSubscriptionFragment = { __typename: "LabelNotificationSubscription" } & Pick<
   LabelNotificationSubscription,
   | "updatedAt"
@@ -24447,6 +25458,26 @@ export type ProjectFragment = { __typename: "Project" } & Pick<
             > & { updatedBy?: Maybe<{ __typename?: "User" } & Pick<User, "id">> }
           >;
         }
+    >;
+    syncedWith?: Maybe<
+      Array<
+        { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+            metadata?: Maybe<
+              | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                  ExternalEntityInfoGithubMetadata,
+                  "number" | "owner" | "repo"
+                >)
+              | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                  ExternalEntityInfoJiraMetadata,
+                  "issueTypeId" | "projectId" | "issueKey"
+                >)
+              | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                  ExternalEntitySlackMetadata,
+                  "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                >)
+            >;
+          }
+      >
     >;
     lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
     lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
@@ -25792,6 +26823,48 @@ export type IssueFragment = { __typename: "Issue" } & Pick<
           user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
         }
     >;
+    sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+      IssueSharedAccess,
+      "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+    > & {
+        sharedWithUsers: Array<
+          { __typename: "User" } & Pick<
+            User,
+            | "statusUntilAt"
+            | "description"
+            | "avatarUrl"
+            | "createdIssueCount"
+            | "disableReason"
+            | "avatarBackgroundColor"
+            | "statusEmoji"
+            | "initials"
+            | "statusLabel"
+            | "updatedAt"
+            | "lastSeen"
+            | "timezone"
+            | "archivedAt"
+            | "createdAt"
+            | "id"
+            | "gitHubUserId"
+            | "displayName"
+            | "email"
+            | "name"
+            | "url"
+            | "active"
+            | "guest"
+            | "app"
+            | "admin"
+            | "owner"
+            | "isAssignable"
+            | "isMentionable"
+            | "isMe"
+            | "supportsAgentSessions"
+            | "canAccessAnyPublicTeam"
+            | "calendarHash"
+            | "inviteHash"
+          >
+        >;
+      };
     delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
     botActor?: Maybe<
       { __typename: "ActorBot" } & Pick<ActorBot, "avatarUrl" | "name" | "userDisplayName" | "subType" | "type" | "id">
@@ -27034,6 +28107,7 @@ export type ProjectUpdateWebhookPayloadFragment = { __typename: "ProjectUpdateWe
   | "url"
   | "bodyData"
   | "body"
+  | "diffMarkdown"
   | "editedAt"
   | "health"
   | "projectId"
@@ -27070,6 +28144,7 @@ export type ProjectWebhookPayloadFragment = { __typename: "ProjectWebhookPayload
   | "content"
   | "documentContentId"
   | "startDate"
+  | "syncedWith"
   | "health"
   | "icon"
   | "completedScopeHistory"
@@ -27388,6 +28463,7 @@ export type InitiativeUpdateWebhookPayloadFragment = { __typename: "InitiativeUp
   | "url"
   | "bodyData"
   | "body"
+  | "diffMarkdown"
   | "editedAt"
   | "health"
   | "initiativeId"
@@ -27987,35 +29063,6 @@ export type SesDomainIdentityFragment = { __typename: "SesDomainIdentity" } & Pi
     creator?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
   };
 
-export type AsksWebSettingsFragment = { __typename: "AsksWebSettings" } & Pick<
-  AsksWebSettings,
-  "domain" | "updatedAt" | "archivedAt" | "createdAt" | "id"
-> & {
-    emailIntakeAddress?: Maybe<{ __typename?: "EmailIntakeAddress" } & Pick<EmailIntakeAddress, "id">>;
-    identityProvider?: Maybe<
-      { __typename: "IdentityProvider" } & Pick<
-        IdentityProvider,
-        | "ssoBinding"
-        | "ssoEndpoint"
-        | "priority"
-        | "ssoSignAlgo"
-        | "issuerEntityId"
-        | "updatedAt"
-        | "spEntityId"
-        | "archivedAt"
-        | "createdAt"
-        | "type"
-        | "id"
-        | "samlEnabled"
-        | "scimEnabled"
-        | "defaultMigrated"
-        | "allowNameChange"
-        | "ssoSigningCert"
-      >
-    >;
-    creator?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
-  };
-
 export type TeamOriginWebhookPayloadFragment = { __typename: "TeamOriginWebhookPayload" } & Pick<
   TeamOriginWebhookPayload,
   "type"
@@ -28276,8 +29323,198 @@ export type ViewPreferencesFragment = { __typename: "ViewPreferences" } & Pick<
 > & {
     preferences: { __typename: "ViewPreferencesValues" } & Pick<
       ViewPreferencesValues,
-      "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-    >;
+      | "issueNesting"
+      | "projectShowEmptyGroupsBoard"
+      | "projectShowEmptyGroupsList"
+      | "projectShowEmptyGroupsTimeline"
+      | "projectShowEmptyGroups"
+      | "projectShowEmptySubGroupsBoard"
+      | "projectShowEmptySubGroupsList"
+      | "projectShowEmptySubGroupsTimeline"
+      | "projectShowEmptySubGroups"
+      | "hiddenColumns"
+      | "hiddenRows"
+      | "timelineChronologyShowCycleTeamIds"
+      | "customViewsOrdering"
+      | "customerPageNeedsViewGrouping"
+      | "customerPageNeedsViewOrdering"
+      | "customersViewOrdering"
+      | "dashboardsOrdering"
+      | "projectGroupingDateResolution"
+      | "viewOrderingDirection"
+      | "embeddedCustomerNeedsViewOrdering"
+      | "inboxViewOrdering"
+      | "initiativeGrouping"
+      | "initiativesViewOrdering"
+      | "issueGrouping"
+      | "layout"
+      | "viewOrdering"
+      | "issueSubGrouping"
+      | "issueGroupingLabelGroupId"
+      | "issueSubGroupingLabelGroupId"
+      | "projectGroupingLabelGroupId"
+      | "projectSubGroupingLabelGroupId"
+      | "projectGroupOrdering"
+      | "projectCustomerNeedsViewGrouping"
+      | "projectCustomerNeedsViewOrdering"
+      | "projectGrouping"
+      | "projectLayout"
+      | "projectViewOrdering"
+      | "projectSubGrouping"
+      | "releasePipelinesViewOrdering"
+      | "reviewGrouping"
+      | "reviewViewOrdering"
+      | "searchResultType"
+      | "searchViewOrdering"
+      | "teamViewOrdering"
+      | "triageViewOrdering"
+      | "workspaceMembersViewOrdering"
+      | "projectZoomLevel"
+      | "timelineZoomScale"
+      | "showCompletedAgentSessions"
+      | "showCompletedIssues"
+      | "showCompletedProjects"
+      | "showCompletedReviews"
+      | "closedIssuesOrderedByRecency"
+      | "showArchivedItems"
+      | "customerPageNeedsShowCompletedIssuesAndProjects"
+      | "projectCustomerNeedsShowCompletedIssuesLast"
+      | "showDraftReviews"
+      | "showEmptyGroupsBoard"
+      | "showEmptyGroupsList"
+      | "showEmptyGroups"
+      | "showEmptySubGroupsBoard"
+      | "showEmptySubGroupsList"
+      | "showEmptySubGroups"
+      | "customerPageNeedsShowImportantFirst"
+      | "embeddedCustomerNeedsShowImportantFirst"
+      | "projectCustomerNeedsShowImportantFirst"
+      | "showParents"
+      | "fieldPreviewLinks"
+      | "showReadItems"
+      | "showSnoozedItems"
+      | "showSubInitiativeProjects"
+      | "showNestedInitiatives"
+      | "showSubIssues"
+      | "showSubTeamIssues"
+      | "showSubTeamProjects"
+      | "showSupervisedIssues"
+      | "fieldSla"
+      | "fieldSentryIssues"
+      | "customViewFieldDateCreated"
+      | "customViewFieldOwner"
+      | "customViewFieldDateUpdated"
+      | "customViewFieldVisibility"
+      | "customerFieldDomains"
+      | "customerFieldOwner"
+      | "customerFieldRequestCount"
+      | "fieldCustomerCount"
+      | "customerFieldRevenue"
+      | "fieldCustomerRevenue"
+      | "customerFieldSize"
+      | "customerFieldSource"
+      | "customerFieldStatus"
+      | "customerFieldTier"
+      | "fieldCycle"
+      | "dashboardFieldDateCreated"
+      | "dashboardFieldOwner"
+      | "dashboardFieldDateUpdated"
+      | "fieldDueDate"
+      | "initiativeFieldHealth"
+      | "initiativeFieldActivity"
+      | "initiativeFieldDescription"
+      | "initiativeFieldInitiativeHealth"
+      | "initiativeFieldOwner"
+      | "initiativeFieldProjects"
+      | "initiativeFieldTargetDate"
+      | "initiativeFieldTeams"
+      | "fieldDateArchived"
+      | "fieldAssignee"
+      | "fieldDateCreated"
+      | "customerPageNeedsFieldIssueTargetDueDate"
+      | "fieldEstimate"
+      | "customerPageNeedsFieldIssueIdentifier"
+      | "fieldId"
+      | "fieldDateMyActivity"
+      | "customerPageNeedsFieldIssuePriority"
+      | "fieldPriority"
+      | "customerPageNeedsFieldIssueStatus"
+      | "fieldStatus"
+      | "fieldDateUpdated"
+      | "fieldLabels"
+      | "fieldLinkCount"
+      | "memberFieldJoined"
+      | "memberFieldStatus"
+      | "memberFieldTeams"
+      | "fieldMilestone"
+      | "projectFieldActivity"
+      | "projectFieldDateCompleted"
+      | "projectFieldDateCreated"
+      | "projectFieldCustomerCount"
+      | "projectFieldCustomerRevenue"
+      | "projectFieldDescriptionBoard"
+      | "projectFieldDescription"
+      | "fieldProject"
+      | "projectFieldHealthTimeline"
+      | "projectFieldHealth"
+      | "projectFieldInitiatives"
+      | "projectFieldLabels"
+      | "projectFieldLeadTimeline"
+      | "projectFieldLead"
+      | "projectFieldMembersBoard"
+      | "projectFieldMembersList"
+      | "projectFieldMembersTimeline"
+      | "projectFieldMembers"
+      | "projectFieldMilestoneTimeline"
+      | "projectFieldMilestone"
+      | "projectFieldPredictionsTimeline"
+      | "projectFieldPredictions"
+      | "projectFieldPriority"
+      | "projectFieldRelationsTimeline"
+      | "projectFieldRelations"
+      | "projectFieldRoadmapsBoard"
+      | "projectFieldRoadmapsList"
+      | "projectFieldRoadmapsTimeline"
+      | "projectFieldRoadmaps"
+      | "projectFieldRolloutStage"
+      | "projectFieldStartDate"
+      | "projectFieldStatusTimeline"
+      | "projectFieldStatus"
+      | "projectFieldTargetDate"
+      | "projectFieldTeamsBoard"
+      | "projectFieldTeamsList"
+      | "projectFieldTeamsTimeline"
+      | "projectFieldTeams"
+      | "projectFieldDateUpdated"
+      | "fieldPullRequests"
+      | "fieldRelease"
+      | "reviewFieldAvatar"
+      | "reviewFieldChecks"
+      | "reviewFieldIdentifier"
+      | "reviewFieldPreviewLinks"
+      | "reviewFieldRepository"
+      | "teamFieldDateCreated"
+      | "teamFieldCycle"
+      | "teamFieldIdentifier"
+      | "teamFieldMembers"
+      | "teamFieldMembership"
+      | "teamFieldOwner"
+      | "teamFieldProjects"
+      | "teamFieldDateUpdated"
+      | "fieldTimeInCurrentStatus"
+      | "showTriageIssues"
+      | "showUnreadItemsFirst"
+      | "timelineChronologyShowWeekNumbers"
+    > & {
+        projectLabelGroupColumns?: Maybe<
+          Array<
+            { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+              ViewPreferencesProjectLabelGroupColumn,
+              "id" | "active"
+            >
+          >
+        >;
+      };
   };
 
 export type IssueImportJqlCheckPayloadFragment = { __typename: "IssueImportJqlCheckPayload" } & Pick<
@@ -28427,11 +29664,6 @@ export type AsksChannelConnectPayloadFragment = { __typename: "AsksChannelConnec
       | "autoCreateOnEmoji"
     > & { teams: Array<{ __typename: "SlackAsksTeamSettings" } & Pick<SlackAsksTeamSettings, "id" | "hasDefaultAsk">> };
   };
-
-export type AsksWebSettingsPayloadFragment = { __typename: "AsksWebSettingsPayload" } & Pick<
-  AsksWebSettingsPayload,
-  "lastSyncId" | "success"
-> & { asksWebSettings: { __typename?: "AsksWebSettings" } & Pick<AsksWebSettings, "id"> };
 
 export type AttachmentConnectionFragment = { __typename: "AttachmentConnection" } & {
   nodes: Array<
@@ -28794,8 +30026,198 @@ export type CustomViewConnectionFragment = { __typename: "CustomViewConnection" 
         viewPreferencesValues?: Maybe<
           { __typename: "ViewPreferencesValues" } & Pick<
             ViewPreferencesValues,
-            "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-          >
+            | "issueNesting"
+            | "projectShowEmptyGroupsBoard"
+            | "projectShowEmptyGroupsList"
+            | "projectShowEmptyGroupsTimeline"
+            | "projectShowEmptyGroups"
+            | "projectShowEmptySubGroupsBoard"
+            | "projectShowEmptySubGroupsList"
+            | "projectShowEmptySubGroupsTimeline"
+            | "projectShowEmptySubGroups"
+            | "hiddenColumns"
+            | "hiddenRows"
+            | "timelineChronologyShowCycleTeamIds"
+            | "customViewsOrdering"
+            | "customerPageNeedsViewGrouping"
+            | "customerPageNeedsViewOrdering"
+            | "customersViewOrdering"
+            | "dashboardsOrdering"
+            | "projectGroupingDateResolution"
+            | "viewOrderingDirection"
+            | "embeddedCustomerNeedsViewOrdering"
+            | "inboxViewOrdering"
+            | "initiativeGrouping"
+            | "initiativesViewOrdering"
+            | "issueGrouping"
+            | "layout"
+            | "viewOrdering"
+            | "issueSubGrouping"
+            | "issueGroupingLabelGroupId"
+            | "issueSubGroupingLabelGroupId"
+            | "projectGroupingLabelGroupId"
+            | "projectSubGroupingLabelGroupId"
+            | "projectGroupOrdering"
+            | "projectCustomerNeedsViewGrouping"
+            | "projectCustomerNeedsViewOrdering"
+            | "projectGrouping"
+            | "projectLayout"
+            | "projectViewOrdering"
+            | "projectSubGrouping"
+            | "releasePipelinesViewOrdering"
+            | "reviewGrouping"
+            | "reviewViewOrdering"
+            | "searchResultType"
+            | "searchViewOrdering"
+            | "teamViewOrdering"
+            | "triageViewOrdering"
+            | "workspaceMembersViewOrdering"
+            | "projectZoomLevel"
+            | "timelineZoomScale"
+            | "showCompletedAgentSessions"
+            | "showCompletedIssues"
+            | "showCompletedProjects"
+            | "showCompletedReviews"
+            | "closedIssuesOrderedByRecency"
+            | "showArchivedItems"
+            | "customerPageNeedsShowCompletedIssuesAndProjects"
+            | "projectCustomerNeedsShowCompletedIssuesLast"
+            | "showDraftReviews"
+            | "showEmptyGroupsBoard"
+            | "showEmptyGroupsList"
+            | "showEmptyGroups"
+            | "showEmptySubGroupsBoard"
+            | "showEmptySubGroupsList"
+            | "showEmptySubGroups"
+            | "customerPageNeedsShowImportantFirst"
+            | "embeddedCustomerNeedsShowImportantFirst"
+            | "projectCustomerNeedsShowImportantFirst"
+            | "showParents"
+            | "fieldPreviewLinks"
+            | "showReadItems"
+            | "showSnoozedItems"
+            | "showSubInitiativeProjects"
+            | "showNestedInitiatives"
+            | "showSubIssues"
+            | "showSubTeamIssues"
+            | "showSubTeamProjects"
+            | "showSupervisedIssues"
+            | "fieldSla"
+            | "fieldSentryIssues"
+            | "customViewFieldDateCreated"
+            | "customViewFieldOwner"
+            | "customViewFieldDateUpdated"
+            | "customViewFieldVisibility"
+            | "customerFieldDomains"
+            | "customerFieldOwner"
+            | "customerFieldRequestCount"
+            | "fieldCustomerCount"
+            | "customerFieldRevenue"
+            | "fieldCustomerRevenue"
+            | "customerFieldSize"
+            | "customerFieldSource"
+            | "customerFieldStatus"
+            | "customerFieldTier"
+            | "fieldCycle"
+            | "dashboardFieldDateCreated"
+            | "dashboardFieldOwner"
+            | "dashboardFieldDateUpdated"
+            | "fieldDueDate"
+            | "initiativeFieldHealth"
+            | "initiativeFieldActivity"
+            | "initiativeFieldDescription"
+            | "initiativeFieldInitiativeHealth"
+            | "initiativeFieldOwner"
+            | "initiativeFieldProjects"
+            | "initiativeFieldTargetDate"
+            | "initiativeFieldTeams"
+            | "fieldDateArchived"
+            | "fieldAssignee"
+            | "fieldDateCreated"
+            | "customerPageNeedsFieldIssueTargetDueDate"
+            | "fieldEstimate"
+            | "customerPageNeedsFieldIssueIdentifier"
+            | "fieldId"
+            | "fieldDateMyActivity"
+            | "customerPageNeedsFieldIssuePriority"
+            | "fieldPriority"
+            | "customerPageNeedsFieldIssueStatus"
+            | "fieldStatus"
+            | "fieldDateUpdated"
+            | "fieldLabels"
+            | "fieldLinkCount"
+            | "memberFieldJoined"
+            | "memberFieldStatus"
+            | "memberFieldTeams"
+            | "fieldMilestone"
+            | "projectFieldActivity"
+            | "projectFieldDateCompleted"
+            | "projectFieldDateCreated"
+            | "projectFieldCustomerCount"
+            | "projectFieldCustomerRevenue"
+            | "projectFieldDescriptionBoard"
+            | "projectFieldDescription"
+            | "fieldProject"
+            | "projectFieldHealthTimeline"
+            | "projectFieldHealth"
+            | "projectFieldInitiatives"
+            | "projectFieldLabels"
+            | "projectFieldLeadTimeline"
+            | "projectFieldLead"
+            | "projectFieldMembersBoard"
+            | "projectFieldMembersList"
+            | "projectFieldMembersTimeline"
+            | "projectFieldMembers"
+            | "projectFieldMilestoneTimeline"
+            | "projectFieldMilestone"
+            | "projectFieldPredictionsTimeline"
+            | "projectFieldPredictions"
+            | "projectFieldPriority"
+            | "projectFieldRelationsTimeline"
+            | "projectFieldRelations"
+            | "projectFieldRoadmapsBoard"
+            | "projectFieldRoadmapsList"
+            | "projectFieldRoadmapsTimeline"
+            | "projectFieldRoadmaps"
+            | "projectFieldRolloutStage"
+            | "projectFieldStartDate"
+            | "projectFieldStatusTimeline"
+            | "projectFieldStatus"
+            | "projectFieldTargetDate"
+            | "projectFieldTeamsBoard"
+            | "projectFieldTeamsList"
+            | "projectFieldTeamsTimeline"
+            | "projectFieldTeams"
+            | "projectFieldDateUpdated"
+            | "fieldPullRequests"
+            | "fieldRelease"
+            | "reviewFieldAvatar"
+            | "reviewFieldChecks"
+            | "reviewFieldIdentifier"
+            | "reviewFieldPreviewLinks"
+            | "reviewFieldRepository"
+            | "teamFieldDateCreated"
+            | "teamFieldCycle"
+            | "teamFieldIdentifier"
+            | "teamFieldMembers"
+            | "teamFieldMembership"
+            | "teamFieldOwner"
+            | "teamFieldProjects"
+            | "teamFieldDateUpdated"
+            | "fieldTimeInCurrentStatus"
+            | "showTriageIssues"
+            | "showUnreadItemsFirst"
+            | "timelineChronologyShowWeekNumbers"
+          > & {
+              projectLabelGroupColumns?: Maybe<
+                Array<
+                  { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                    ViewPreferencesProjectLabelGroupColumn,
+                    "id" | "active"
+                  >
+                >
+              >;
+            }
         >;
         userViewPreferences?: Maybe<
           { __typename: "ViewPreferences" } & Pick<
@@ -28804,8 +30226,198 @@ export type CustomViewConnectionFragment = { __typename: "CustomViewConnection" 
           > & {
               preferences: { __typename: "ViewPreferencesValues" } & Pick<
                 ViewPreferencesValues,
-                "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-              >;
+                | "issueNesting"
+                | "projectShowEmptyGroupsBoard"
+                | "projectShowEmptyGroupsList"
+                | "projectShowEmptyGroupsTimeline"
+                | "projectShowEmptyGroups"
+                | "projectShowEmptySubGroupsBoard"
+                | "projectShowEmptySubGroupsList"
+                | "projectShowEmptySubGroupsTimeline"
+                | "projectShowEmptySubGroups"
+                | "hiddenColumns"
+                | "hiddenRows"
+                | "timelineChronologyShowCycleTeamIds"
+                | "customViewsOrdering"
+                | "customerPageNeedsViewGrouping"
+                | "customerPageNeedsViewOrdering"
+                | "customersViewOrdering"
+                | "dashboardsOrdering"
+                | "projectGroupingDateResolution"
+                | "viewOrderingDirection"
+                | "embeddedCustomerNeedsViewOrdering"
+                | "inboxViewOrdering"
+                | "initiativeGrouping"
+                | "initiativesViewOrdering"
+                | "issueGrouping"
+                | "layout"
+                | "viewOrdering"
+                | "issueSubGrouping"
+                | "issueGroupingLabelGroupId"
+                | "issueSubGroupingLabelGroupId"
+                | "projectGroupingLabelGroupId"
+                | "projectSubGroupingLabelGroupId"
+                | "projectGroupOrdering"
+                | "projectCustomerNeedsViewGrouping"
+                | "projectCustomerNeedsViewOrdering"
+                | "projectGrouping"
+                | "projectLayout"
+                | "projectViewOrdering"
+                | "projectSubGrouping"
+                | "releasePipelinesViewOrdering"
+                | "reviewGrouping"
+                | "reviewViewOrdering"
+                | "searchResultType"
+                | "searchViewOrdering"
+                | "teamViewOrdering"
+                | "triageViewOrdering"
+                | "workspaceMembersViewOrdering"
+                | "projectZoomLevel"
+                | "timelineZoomScale"
+                | "showCompletedAgentSessions"
+                | "showCompletedIssues"
+                | "showCompletedProjects"
+                | "showCompletedReviews"
+                | "closedIssuesOrderedByRecency"
+                | "showArchivedItems"
+                | "customerPageNeedsShowCompletedIssuesAndProjects"
+                | "projectCustomerNeedsShowCompletedIssuesLast"
+                | "showDraftReviews"
+                | "showEmptyGroupsBoard"
+                | "showEmptyGroupsList"
+                | "showEmptyGroups"
+                | "showEmptySubGroupsBoard"
+                | "showEmptySubGroupsList"
+                | "showEmptySubGroups"
+                | "customerPageNeedsShowImportantFirst"
+                | "embeddedCustomerNeedsShowImportantFirst"
+                | "projectCustomerNeedsShowImportantFirst"
+                | "showParents"
+                | "fieldPreviewLinks"
+                | "showReadItems"
+                | "showSnoozedItems"
+                | "showSubInitiativeProjects"
+                | "showNestedInitiatives"
+                | "showSubIssues"
+                | "showSubTeamIssues"
+                | "showSubTeamProjects"
+                | "showSupervisedIssues"
+                | "fieldSla"
+                | "fieldSentryIssues"
+                | "customViewFieldDateCreated"
+                | "customViewFieldOwner"
+                | "customViewFieldDateUpdated"
+                | "customViewFieldVisibility"
+                | "customerFieldDomains"
+                | "customerFieldOwner"
+                | "customerFieldRequestCount"
+                | "fieldCustomerCount"
+                | "customerFieldRevenue"
+                | "fieldCustomerRevenue"
+                | "customerFieldSize"
+                | "customerFieldSource"
+                | "customerFieldStatus"
+                | "customerFieldTier"
+                | "fieldCycle"
+                | "dashboardFieldDateCreated"
+                | "dashboardFieldOwner"
+                | "dashboardFieldDateUpdated"
+                | "fieldDueDate"
+                | "initiativeFieldHealth"
+                | "initiativeFieldActivity"
+                | "initiativeFieldDescription"
+                | "initiativeFieldInitiativeHealth"
+                | "initiativeFieldOwner"
+                | "initiativeFieldProjects"
+                | "initiativeFieldTargetDate"
+                | "initiativeFieldTeams"
+                | "fieldDateArchived"
+                | "fieldAssignee"
+                | "fieldDateCreated"
+                | "customerPageNeedsFieldIssueTargetDueDate"
+                | "fieldEstimate"
+                | "customerPageNeedsFieldIssueIdentifier"
+                | "fieldId"
+                | "fieldDateMyActivity"
+                | "customerPageNeedsFieldIssuePriority"
+                | "fieldPriority"
+                | "customerPageNeedsFieldIssueStatus"
+                | "fieldStatus"
+                | "fieldDateUpdated"
+                | "fieldLabels"
+                | "fieldLinkCount"
+                | "memberFieldJoined"
+                | "memberFieldStatus"
+                | "memberFieldTeams"
+                | "fieldMilestone"
+                | "projectFieldActivity"
+                | "projectFieldDateCompleted"
+                | "projectFieldDateCreated"
+                | "projectFieldCustomerCount"
+                | "projectFieldCustomerRevenue"
+                | "projectFieldDescriptionBoard"
+                | "projectFieldDescription"
+                | "fieldProject"
+                | "projectFieldHealthTimeline"
+                | "projectFieldHealth"
+                | "projectFieldInitiatives"
+                | "projectFieldLabels"
+                | "projectFieldLeadTimeline"
+                | "projectFieldLead"
+                | "projectFieldMembersBoard"
+                | "projectFieldMembersList"
+                | "projectFieldMembersTimeline"
+                | "projectFieldMembers"
+                | "projectFieldMilestoneTimeline"
+                | "projectFieldMilestone"
+                | "projectFieldPredictionsTimeline"
+                | "projectFieldPredictions"
+                | "projectFieldPriority"
+                | "projectFieldRelationsTimeline"
+                | "projectFieldRelations"
+                | "projectFieldRoadmapsBoard"
+                | "projectFieldRoadmapsList"
+                | "projectFieldRoadmapsTimeline"
+                | "projectFieldRoadmaps"
+                | "projectFieldRolloutStage"
+                | "projectFieldStartDate"
+                | "projectFieldStatusTimeline"
+                | "projectFieldStatus"
+                | "projectFieldTargetDate"
+                | "projectFieldTeamsBoard"
+                | "projectFieldTeamsList"
+                | "projectFieldTeamsTimeline"
+                | "projectFieldTeams"
+                | "projectFieldDateUpdated"
+                | "fieldPullRequests"
+                | "fieldRelease"
+                | "reviewFieldAvatar"
+                | "reviewFieldChecks"
+                | "reviewFieldIdentifier"
+                | "reviewFieldPreviewLinks"
+                | "reviewFieldRepository"
+                | "teamFieldDateCreated"
+                | "teamFieldCycle"
+                | "teamFieldIdentifier"
+                | "teamFieldMembers"
+                | "teamFieldMembership"
+                | "teamFieldOwner"
+                | "teamFieldProjects"
+                | "teamFieldDateUpdated"
+                | "fieldTimeInCurrentStatus"
+                | "showTriageIssues"
+                | "showUnreadItemsFirst"
+                | "timelineChronologyShowWeekNumbers"
+              > & {
+                  projectLabelGroupColumns?: Maybe<
+                    Array<
+                      { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                        ViewPreferencesProjectLabelGroupColumn,
+                        "id" | "active"
+                      >
+                    >
+                  >;
+                };
             }
         >;
         organizationViewPreferences?: Maybe<
@@ -28815,8 +30427,198 @@ export type CustomViewConnectionFragment = { __typename: "CustomViewConnection" 
           > & {
               preferences: { __typename: "ViewPreferencesValues" } & Pick<
                 ViewPreferencesValues,
-                "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-              >;
+                | "issueNesting"
+                | "projectShowEmptyGroupsBoard"
+                | "projectShowEmptyGroupsList"
+                | "projectShowEmptyGroupsTimeline"
+                | "projectShowEmptyGroups"
+                | "projectShowEmptySubGroupsBoard"
+                | "projectShowEmptySubGroupsList"
+                | "projectShowEmptySubGroupsTimeline"
+                | "projectShowEmptySubGroups"
+                | "hiddenColumns"
+                | "hiddenRows"
+                | "timelineChronologyShowCycleTeamIds"
+                | "customViewsOrdering"
+                | "customerPageNeedsViewGrouping"
+                | "customerPageNeedsViewOrdering"
+                | "customersViewOrdering"
+                | "dashboardsOrdering"
+                | "projectGroupingDateResolution"
+                | "viewOrderingDirection"
+                | "embeddedCustomerNeedsViewOrdering"
+                | "inboxViewOrdering"
+                | "initiativeGrouping"
+                | "initiativesViewOrdering"
+                | "issueGrouping"
+                | "layout"
+                | "viewOrdering"
+                | "issueSubGrouping"
+                | "issueGroupingLabelGroupId"
+                | "issueSubGroupingLabelGroupId"
+                | "projectGroupingLabelGroupId"
+                | "projectSubGroupingLabelGroupId"
+                | "projectGroupOrdering"
+                | "projectCustomerNeedsViewGrouping"
+                | "projectCustomerNeedsViewOrdering"
+                | "projectGrouping"
+                | "projectLayout"
+                | "projectViewOrdering"
+                | "projectSubGrouping"
+                | "releasePipelinesViewOrdering"
+                | "reviewGrouping"
+                | "reviewViewOrdering"
+                | "searchResultType"
+                | "searchViewOrdering"
+                | "teamViewOrdering"
+                | "triageViewOrdering"
+                | "workspaceMembersViewOrdering"
+                | "projectZoomLevel"
+                | "timelineZoomScale"
+                | "showCompletedAgentSessions"
+                | "showCompletedIssues"
+                | "showCompletedProjects"
+                | "showCompletedReviews"
+                | "closedIssuesOrderedByRecency"
+                | "showArchivedItems"
+                | "customerPageNeedsShowCompletedIssuesAndProjects"
+                | "projectCustomerNeedsShowCompletedIssuesLast"
+                | "showDraftReviews"
+                | "showEmptyGroupsBoard"
+                | "showEmptyGroupsList"
+                | "showEmptyGroups"
+                | "showEmptySubGroupsBoard"
+                | "showEmptySubGroupsList"
+                | "showEmptySubGroups"
+                | "customerPageNeedsShowImportantFirst"
+                | "embeddedCustomerNeedsShowImportantFirst"
+                | "projectCustomerNeedsShowImportantFirst"
+                | "showParents"
+                | "fieldPreviewLinks"
+                | "showReadItems"
+                | "showSnoozedItems"
+                | "showSubInitiativeProjects"
+                | "showNestedInitiatives"
+                | "showSubIssues"
+                | "showSubTeamIssues"
+                | "showSubTeamProjects"
+                | "showSupervisedIssues"
+                | "fieldSla"
+                | "fieldSentryIssues"
+                | "customViewFieldDateCreated"
+                | "customViewFieldOwner"
+                | "customViewFieldDateUpdated"
+                | "customViewFieldVisibility"
+                | "customerFieldDomains"
+                | "customerFieldOwner"
+                | "customerFieldRequestCount"
+                | "fieldCustomerCount"
+                | "customerFieldRevenue"
+                | "fieldCustomerRevenue"
+                | "customerFieldSize"
+                | "customerFieldSource"
+                | "customerFieldStatus"
+                | "customerFieldTier"
+                | "fieldCycle"
+                | "dashboardFieldDateCreated"
+                | "dashboardFieldOwner"
+                | "dashboardFieldDateUpdated"
+                | "fieldDueDate"
+                | "initiativeFieldHealth"
+                | "initiativeFieldActivity"
+                | "initiativeFieldDescription"
+                | "initiativeFieldInitiativeHealth"
+                | "initiativeFieldOwner"
+                | "initiativeFieldProjects"
+                | "initiativeFieldTargetDate"
+                | "initiativeFieldTeams"
+                | "fieldDateArchived"
+                | "fieldAssignee"
+                | "fieldDateCreated"
+                | "customerPageNeedsFieldIssueTargetDueDate"
+                | "fieldEstimate"
+                | "customerPageNeedsFieldIssueIdentifier"
+                | "fieldId"
+                | "fieldDateMyActivity"
+                | "customerPageNeedsFieldIssuePriority"
+                | "fieldPriority"
+                | "customerPageNeedsFieldIssueStatus"
+                | "fieldStatus"
+                | "fieldDateUpdated"
+                | "fieldLabels"
+                | "fieldLinkCount"
+                | "memberFieldJoined"
+                | "memberFieldStatus"
+                | "memberFieldTeams"
+                | "fieldMilestone"
+                | "projectFieldActivity"
+                | "projectFieldDateCompleted"
+                | "projectFieldDateCreated"
+                | "projectFieldCustomerCount"
+                | "projectFieldCustomerRevenue"
+                | "projectFieldDescriptionBoard"
+                | "projectFieldDescription"
+                | "fieldProject"
+                | "projectFieldHealthTimeline"
+                | "projectFieldHealth"
+                | "projectFieldInitiatives"
+                | "projectFieldLabels"
+                | "projectFieldLeadTimeline"
+                | "projectFieldLead"
+                | "projectFieldMembersBoard"
+                | "projectFieldMembersList"
+                | "projectFieldMembersTimeline"
+                | "projectFieldMembers"
+                | "projectFieldMilestoneTimeline"
+                | "projectFieldMilestone"
+                | "projectFieldPredictionsTimeline"
+                | "projectFieldPredictions"
+                | "projectFieldPriority"
+                | "projectFieldRelationsTimeline"
+                | "projectFieldRelations"
+                | "projectFieldRoadmapsBoard"
+                | "projectFieldRoadmapsList"
+                | "projectFieldRoadmapsTimeline"
+                | "projectFieldRoadmaps"
+                | "projectFieldRolloutStage"
+                | "projectFieldStartDate"
+                | "projectFieldStatusTimeline"
+                | "projectFieldStatus"
+                | "projectFieldTargetDate"
+                | "projectFieldTeamsBoard"
+                | "projectFieldTeamsList"
+                | "projectFieldTeamsTimeline"
+                | "projectFieldTeams"
+                | "projectFieldDateUpdated"
+                | "fieldPullRequests"
+                | "fieldRelease"
+                | "reviewFieldAvatar"
+                | "reviewFieldChecks"
+                | "reviewFieldIdentifier"
+                | "reviewFieldPreviewLinks"
+                | "reviewFieldRepository"
+                | "teamFieldDateCreated"
+                | "teamFieldCycle"
+                | "teamFieldIdentifier"
+                | "teamFieldMembers"
+                | "teamFieldMembership"
+                | "teamFieldOwner"
+                | "teamFieldProjects"
+                | "teamFieldDateUpdated"
+                | "fieldTimeInCurrentStatus"
+                | "showTriageIssues"
+                | "showUnreadItemsFirst"
+                | "timelineChronologyShowWeekNumbers"
+              > & {
+                  projectLabelGroupColumns?: Maybe<
+                    Array<
+                      { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                        ViewPreferencesProjectLabelGroupColumn,
+                        "id" | "active"
+                      >
+                    >
+                  >;
+                };
             }
         >;
         team?: Maybe<{ __typename?: "Team" } & Pick<Team, "id">>;
@@ -29242,6 +31044,11 @@ export type EntityExternalLinkPayloadFragment = { __typename: "EntityExternalLin
   EntityExternalLinkPayload,
   "lastSyncId" | "success"
 > & { entityExternalLink: { __typename?: "EntityExternalLink" } & Pick<EntityExternalLink, "id"> };
+
+export type EventTrackingPayloadFragment = { __typename: "EventTrackingPayload" } & Pick<
+  EventTrackingPayload,
+  "success"
+>;
 
 export type ExternalUserConnectionFragment = { __typename: "ExternalUserConnection" } & {
   nodes: Array<
@@ -29706,6 +31513,48 @@ export type IssueBatchPayloadFragment = { __typename: "IssueBatchPayload" } & Pi
                 user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
               }
           >;
+          sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+            IssueSharedAccess,
+            "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+          > & {
+              sharedWithUsers: Array<
+                { __typename: "User" } & Pick<
+                  User,
+                  | "statusUntilAt"
+                  | "description"
+                  | "avatarUrl"
+                  | "createdIssueCount"
+                  | "disableReason"
+                  | "avatarBackgroundColor"
+                  | "statusEmoji"
+                  | "initials"
+                  | "statusLabel"
+                  | "updatedAt"
+                  | "lastSeen"
+                  | "timezone"
+                  | "archivedAt"
+                  | "createdAt"
+                  | "id"
+                  | "gitHubUserId"
+                  | "displayName"
+                  | "email"
+                  | "name"
+                  | "url"
+                  | "active"
+                  | "guest"
+                  | "app"
+                  | "admin"
+                  | "owner"
+                  | "isAssignable"
+                  | "isMentionable"
+                  | "isMe"
+                  | "supportsAgentSessions"
+                  | "canAccessAnyPublicTeam"
+                  | "calendarHash"
+                  | "inviteHash"
+                >
+              >;
+            };
           delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
           botActor?: Maybe<
             { __typename: "ActorBot" } & Pick<
@@ -29808,6 +31657,48 @@ export type IssueConnectionFragment = { __typename: "IssueConnection" } & {
               user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             }
         >;
+        sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+          IssueSharedAccess,
+          "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+        > & {
+            sharedWithUsers: Array<
+              { __typename: "User" } & Pick<
+                User,
+                | "statusUntilAt"
+                | "description"
+                | "avatarUrl"
+                | "createdIssueCount"
+                | "disableReason"
+                | "avatarBackgroundColor"
+                | "statusEmoji"
+                | "initials"
+                | "statusLabel"
+                | "updatedAt"
+                | "lastSeen"
+                | "timezone"
+                | "archivedAt"
+                | "createdAt"
+                | "id"
+                | "gitHubUserId"
+                | "displayName"
+                | "email"
+                | "name"
+                | "url"
+                | "active"
+                | "guest"
+                | "app"
+                | "admin"
+                | "owner"
+                | "isAssignable"
+                | "isMentionable"
+                | "isMe"
+                | "supportsAgentSessions"
+                | "canAccessAnyPublicTeam"
+                | "calendarHash"
+                | "inviteHash"
+              >
+            >;
+          };
         delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
         botActor?: Maybe<
           { __typename: "ActorBot" } & Pick<
@@ -30305,6 +32196,48 @@ export type IssueSearchPayloadFragment = { __typename: "IssueSearchPayload" } & 
                 user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
               }
           >;
+          sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+            IssueSharedAccess,
+            "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+          > & {
+              sharedWithUsers: Array<
+                { __typename: "User" } & Pick<
+                  User,
+                  | "statusUntilAt"
+                  | "description"
+                  | "avatarUrl"
+                  | "createdIssueCount"
+                  | "disableReason"
+                  | "avatarBackgroundColor"
+                  | "statusEmoji"
+                  | "initials"
+                  | "statusLabel"
+                  | "updatedAt"
+                  | "lastSeen"
+                  | "timezone"
+                  | "archivedAt"
+                  | "createdAt"
+                  | "id"
+                  | "gitHubUserId"
+                  | "displayName"
+                  | "email"
+                  | "name"
+                  | "url"
+                  | "active"
+                  | "guest"
+                  | "app"
+                  | "admin"
+                  | "owner"
+                  | "isAssignable"
+                  | "isMentionable"
+                  | "isMe"
+                  | "supportsAgentSessions"
+                  | "canAccessAnyPublicTeam"
+                  | "calendarHash"
+                  | "inviteHash"
+                >
+              >;
+            };
           delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
           botActor?: Maybe<
             { __typename: "ActorBot" } & Pick<
@@ -30410,6 +32343,48 @@ export type IssueSearchResultFragment = { __typename: "IssueSearchResult" } & Pi
           user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
         }
     >;
+    sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+      IssueSharedAccess,
+      "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+    > & {
+        sharedWithUsers: Array<
+          { __typename: "User" } & Pick<
+            User,
+            | "statusUntilAt"
+            | "description"
+            | "avatarUrl"
+            | "createdIssueCount"
+            | "disableReason"
+            | "avatarBackgroundColor"
+            | "statusEmoji"
+            | "initials"
+            | "statusLabel"
+            | "updatedAt"
+            | "lastSeen"
+            | "timezone"
+            | "archivedAt"
+            | "createdAt"
+            | "id"
+            | "gitHubUserId"
+            | "displayName"
+            | "email"
+            | "name"
+            | "url"
+            | "active"
+            | "guest"
+            | "app"
+            | "admin"
+            | "owner"
+            | "isAssignable"
+            | "isMentionable"
+            | "isMe"
+            | "supportsAgentSessions"
+            | "canAccessAnyPublicTeam"
+            | "calendarHash"
+            | "inviteHash"
+          >
+        >;
+      };
     delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
     botActor?: Maybe<
       { __typename: "ActorBot" } & Pick<ActorBot, "avatarUrl" | "name" | "userDisplayName" | "subType" | "type" | "id">
@@ -30450,6 +32425,49 @@ export type IssueSearchResultFragment = { __typename: "IssueSearchResult" } & Pi
     snoozedBy?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
     favorite?: Maybe<{ __typename?: "Favorite" } & Pick<Favorite, "id">>;
     state: { __typename?: "WorkflowState" } & Pick<WorkflowState, "id">;
+  };
+
+export type IssueSharedAccessFragment = { __typename: "IssueSharedAccess" } & Pick<
+  IssueSharedAccess,
+  "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+> & {
+    sharedWithUsers: Array<
+      { __typename: "User" } & Pick<
+        User,
+        | "statusUntilAt"
+        | "description"
+        | "avatarUrl"
+        | "createdIssueCount"
+        | "disableReason"
+        | "avatarBackgroundColor"
+        | "statusEmoji"
+        | "initials"
+        | "statusLabel"
+        | "updatedAt"
+        | "lastSeen"
+        | "timezone"
+        | "archivedAt"
+        | "createdAt"
+        | "id"
+        | "gitHubUserId"
+        | "displayName"
+        | "email"
+        | "name"
+        | "url"
+        | "active"
+        | "guest"
+        | "app"
+        | "admin"
+        | "owner"
+        | "isAssignable"
+        | "isMentionable"
+        | "isMe"
+        | "supportsAgentSessions"
+        | "canAccessAnyPublicTeam"
+        | "calendarHash"
+        | "inviteHash"
+      >
+    >;
   };
 
 export type IssueStateSpanConnectionFragment = { __typename: "IssueStateSpanConnection" } & {
@@ -30551,8 +32569,6 @@ type Node_AgentSessionToPullRequest_Fragment = { __typename: "AgentSessionToPull
 >;
 
 type Node_AiPromptRules_Fragment = { __typename: "AiPromptRules" } & Pick<AiPromptRules, "id">;
-
-type Node_AsksWebSettings_Fragment = { __typename: "AsksWebSettings" } & Pick<AsksWebSettings, "id">;
 
 type Node_Attachment_Fragment = { __typename: "Attachment" } & Pick<Attachment, "id">;
 
@@ -30795,7 +32811,6 @@ export type NodeFragment =
   | Node_AgentSession_Fragment
   | Node_AgentSessionToPullRequest_Fragment
   | Node_AiPromptRules_Fragment
-  | Node_AsksWebSettings_Fragment
   | Node_Attachment_Fragment
   | Node_AuditEntry_Fragment
   | Node_Comment_Fragment
@@ -32670,6 +34685,26 @@ export type ProjectConnectionFragment = { __typename: "ProjectConnection" } & {
               >;
             }
         >;
+        syncedWith?: Maybe<
+          Array<
+            { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+                metadata?: Maybe<
+                  | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                      ExternalEntityInfoGithubMetadata,
+                      "number" | "owner" | "repo"
+                    >)
+                  | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                      ExternalEntityInfoJiraMetadata,
+                      "issueTypeId" | "projectId" | "issueKey"
+                    >)
+                  | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                      ExternalEntitySlackMetadata,
+                      "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                    >)
+                >;
+              }
+          >
+        >;
         lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
         lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
         lead?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
@@ -32917,6 +34952,26 @@ export type ProjectSearchPayloadFragment = { __typename: "ProjectSearchPayload" 
                 >;
               }
           >;
+          syncedWith?: Maybe<
+            Array<
+              { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+                  metadata?: Maybe<
+                    | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                        ExternalEntityInfoGithubMetadata,
+                        "number" | "owner" | "repo"
+                      >)
+                    | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                        ExternalEntityInfoJiraMetadata,
+                        "issueTypeId" | "projectId" | "issueKey"
+                      >)
+                    | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                        ExternalEntitySlackMetadata,
+                        "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                      >)
+                  >;
+                }
+            >
+          >;
           lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
           lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
           lead?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
@@ -33003,6 +35058,26 @@ export type ProjectSearchResultFragment = { __typename: "ProjectSearchResult" } 
             > & { updatedBy?: Maybe<{ __typename?: "User" } & Pick<User, "id">> }
           >;
         }
+    >;
+    syncedWith?: Maybe<
+      Array<
+        { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+            metadata?: Maybe<
+              | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                  ExternalEntityInfoGithubMetadata,
+                  "number" | "owner" | "repo"
+                >)
+              | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                  ExternalEntityInfoJiraMetadata,
+                  "issueTypeId" | "projectId" | "issueKey"
+                >)
+              | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                  ExternalEntitySlackMetadata,
+                  "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                >)
+            >;
+          }
+      >
     >;
     lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
     lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
@@ -33542,15 +35617,395 @@ export type ViewPreferencesPayloadFragment = { __typename: "ViewPreferencesPaylo
     > & {
         preferences: { __typename: "ViewPreferencesValues" } & Pick<
           ViewPreferencesValues,
-          "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-        >;
+          | "issueNesting"
+          | "projectShowEmptyGroupsBoard"
+          | "projectShowEmptyGroupsList"
+          | "projectShowEmptyGroupsTimeline"
+          | "projectShowEmptyGroups"
+          | "projectShowEmptySubGroupsBoard"
+          | "projectShowEmptySubGroupsList"
+          | "projectShowEmptySubGroupsTimeline"
+          | "projectShowEmptySubGroups"
+          | "hiddenColumns"
+          | "hiddenRows"
+          | "timelineChronologyShowCycleTeamIds"
+          | "customViewsOrdering"
+          | "customerPageNeedsViewGrouping"
+          | "customerPageNeedsViewOrdering"
+          | "customersViewOrdering"
+          | "dashboardsOrdering"
+          | "projectGroupingDateResolution"
+          | "viewOrderingDirection"
+          | "embeddedCustomerNeedsViewOrdering"
+          | "inboxViewOrdering"
+          | "initiativeGrouping"
+          | "initiativesViewOrdering"
+          | "issueGrouping"
+          | "layout"
+          | "viewOrdering"
+          | "issueSubGrouping"
+          | "issueGroupingLabelGroupId"
+          | "issueSubGroupingLabelGroupId"
+          | "projectGroupingLabelGroupId"
+          | "projectSubGroupingLabelGroupId"
+          | "projectGroupOrdering"
+          | "projectCustomerNeedsViewGrouping"
+          | "projectCustomerNeedsViewOrdering"
+          | "projectGrouping"
+          | "projectLayout"
+          | "projectViewOrdering"
+          | "projectSubGrouping"
+          | "releasePipelinesViewOrdering"
+          | "reviewGrouping"
+          | "reviewViewOrdering"
+          | "searchResultType"
+          | "searchViewOrdering"
+          | "teamViewOrdering"
+          | "triageViewOrdering"
+          | "workspaceMembersViewOrdering"
+          | "projectZoomLevel"
+          | "timelineZoomScale"
+          | "showCompletedAgentSessions"
+          | "showCompletedIssues"
+          | "showCompletedProjects"
+          | "showCompletedReviews"
+          | "closedIssuesOrderedByRecency"
+          | "showArchivedItems"
+          | "customerPageNeedsShowCompletedIssuesAndProjects"
+          | "projectCustomerNeedsShowCompletedIssuesLast"
+          | "showDraftReviews"
+          | "showEmptyGroupsBoard"
+          | "showEmptyGroupsList"
+          | "showEmptyGroups"
+          | "showEmptySubGroupsBoard"
+          | "showEmptySubGroupsList"
+          | "showEmptySubGroups"
+          | "customerPageNeedsShowImportantFirst"
+          | "embeddedCustomerNeedsShowImportantFirst"
+          | "projectCustomerNeedsShowImportantFirst"
+          | "showParents"
+          | "fieldPreviewLinks"
+          | "showReadItems"
+          | "showSnoozedItems"
+          | "showSubInitiativeProjects"
+          | "showNestedInitiatives"
+          | "showSubIssues"
+          | "showSubTeamIssues"
+          | "showSubTeamProjects"
+          | "showSupervisedIssues"
+          | "fieldSla"
+          | "fieldSentryIssues"
+          | "customViewFieldDateCreated"
+          | "customViewFieldOwner"
+          | "customViewFieldDateUpdated"
+          | "customViewFieldVisibility"
+          | "customerFieldDomains"
+          | "customerFieldOwner"
+          | "customerFieldRequestCount"
+          | "fieldCustomerCount"
+          | "customerFieldRevenue"
+          | "fieldCustomerRevenue"
+          | "customerFieldSize"
+          | "customerFieldSource"
+          | "customerFieldStatus"
+          | "customerFieldTier"
+          | "fieldCycle"
+          | "dashboardFieldDateCreated"
+          | "dashboardFieldOwner"
+          | "dashboardFieldDateUpdated"
+          | "fieldDueDate"
+          | "initiativeFieldHealth"
+          | "initiativeFieldActivity"
+          | "initiativeFieldDescription"
+          | "initiativeFieldInitiativeHealth"
+          | "initiativeFieldOwner"
+          | "initiativeFieldProjects"
+          | "initiativeFieldTargetDate"
+          | "initiativeFieldTeams"
+          | "fieldDateArchived"
+          | "fieldAssignee"
+          | "fieldDateCreated"
+          | "customerPageNeedsFieldIssueTargetDueDate"
+          | "fieldEstimate"
+          | "customerPageNeedsFieldIssueIdentifier"
+          | "fieldId"
+          | "fieldDateMyActivity"
+          | "customerPageNeedsFieldIssuePriority"
+          | "fieldPriority"
+          | "customerPageNeedsFieldIssueStatus"
+          | "fieldStatus"
+          | "fieldDateUpdated"
+          | "fieldLabels"
+          | "fieldLinkCount"
+          | "memberFieldJoined"
+          | "memberFieldStatus"
+          | "memberFieldTeams"
+          | "fieldMilestone"
+          | "projectFieldActivity"
+          | "projectFieldDateCompleted"
+          | "projectFieldDateCreated"
+          | "projectFieldCustomerCount"
+          | "projectFieldCustomerRevenue"
+          | "projectFieldDescriptionBoard"
+          | "projectFieldDescription"
+          | "fieldProject"
+          | "projectFieldHealthTimeline"
+          | "projectFieldHealth"
+          | "projectFieldInitiatives"
+          | "projectFieldLabels"
+          | "projectFieldLeadTimeline"
+          | "projectFieldLead"
+          | "projectFieldMembersBoard"
+          | "projectFieldMembersList"
+          | "projectFieldMembersTimeline"
+          | "projectFieldMembers"
+          | "projectFieldMilestoneTimeline"
+          | "projectFieldMilestone"
+          | "projectFieldPredictionsTimeline"
+          | "projectFieldPredictions"
+          | "projectFieldPriority"
+          | "projectFieldRelationsTimeline"
+          | "projectFieldRelations"
+          | "projectFieldRoadmapsBoard"
+          | "projectFieldRoadmapsList"
+          | "projectFieldRoadmapsTimeline"
+          | "projectFieldRoadmaps"
+          | "projectFieldRolloutStage"
+          | "projectFieldStartDate"
+          | "projectFieldStatusTimeline"
+          | "projectFieldStatus"
+          | "projectFieldTargetDate"
+          | "projectFieldTeamsBoard"
+          | "projectFieldTeamsList"
+          | "projectFieldTeamsTimeline"
+          | "projectFieldTeams"
+          | "projectFieldDateUpdated"
+          | "fieldPullRequests"
+          | "fieldRelease"
+          | "reviewFieldAvatar"
+          | "reviewFieldChecks"
+          | "reviewFieldIdentifier"
+          | "reviewFieldPreviewLinks"
+          | "reviewFieldRepository"
+          | "teamFieldDateCreated"
+          | "teamFieldCycle"
+          | "teamFieldIdentifier"
+          | "teamFieldMembers"
+          | "teamFieldMembership"
+          | "teamFieldOwner"
+          | "teamFieldProjects"
+          | "teamFieldDateUpdated"
+          | "fieldTimeInCurrentStatus"
+          | "showTriageIssues"
+          | "showUnreadItemsFirst"
+          | "timelineChronologyShowWeekNumbers"
+        > & {
+            projectLabelGroupColumns?: Maybe<
+              Array<
+                { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                  ViewPreferencesProjectLabelGroupColumn,
+                  "id" | "active"
+                >
+              >
+            >;
+          };
       };
   };
 
 export type ViewPreferencesValuesFragment = { __typename: "ViewPreferencesValues" } & Pick<
   ViewPreferencesValues,
-  "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
->;
+  | "issueNesting"
+  | "projectShowEmptyGroupsBoard"
+  | "projectShowEmptyGroupsList"
+  | "projectShowEmptyGroupsTimeline"
+  | "projectShowEmptyGroups"
+  | "projectShowEmptySubGroupsBoard"
+  | "projectShowEmptySubGroupsList"
+  | "projectShowEmptySubGroupsTimeline"
+  | "projectShowEmptySubGroups"
+  | "hiddenColumns"
+  | "hiddenRows"
+  | "timelineChronologyShowCycleTeamIds"
+  | "customViewsOrdering"
+  | "customerPageNeedsViewGrouping"
+  | "customerPageNeedsViewOrdering"
+  | "customersViewOrdering"
+  | "dashboardsOrdering"
+  | "projectGroupingDateResolution"
+  | "viewOrderingDirection"
+  | "embeddedCustomerNeedsViewOrdering"
+  | "inboxViewOrdering"
+  | "initiativeGrouping"
+  | "initiativesViewOrdering"
+  | "issueGrouping"
+  | "layout"
+  | "viewOrdering"
+  | "issueSubGrouping"
+  | "issueGroupingLabelGroupId"
+  | "issueSubGroupingLabelGroupId"
+  | "projectGroupingLabelGroupId"
+  | "projectSubGroupingLabelGroupId"
+  | "projectGroupOrdering"
+  | "projectCustomerNeedsViewGrouping"
+  | "projectCustomerNeedsViewOrdering"
+  | "projectGrouping"
+  | "projectLayout"
+  | "projectViewOrdering"
+  | "projectSubGrouping"
+  | "releasePipelinesViewOrdering"
+  | "reviewGrouping"
+  | "reviewViewOrdering"
+  | "searchResultType"
+  | "searchViewOrdering"
+  | "teamViewOrdering"
+  | "triageViewOrdering"
+  | "workspaceMembersViewOrdering"
+  | "projectZoomLevel"
+  | "timelineZoomScale"
+  | "showCompletedAgentSessions"
+  | "showCompletedIssues"
+  | "showCompletedProjects"
+  | "showCompletedReviews"
+  | "closedIssuesOrderedByRecency"
+  | "showArchivedItems"
+  | "customerPageNeedsShowCompletedIssuesAndProjects"
+  | "projectCustomerNeedsShowCompletedIssuesLast"
+  | "showDraftReviews"
+  | "showEmptyGroupsBoard"
+  | "showEmptyGroupsList"
+  | "showEmptyGroups"
+  | "showEmptySubGroupsBoard"
+  | "showEmptySubGroupsList"
+  | "showEmptySubGroups"
+  | "customerPageNeedsShowImportantFirst"
+  | "embeddedCustomerNeedsShowImportantFirst"
+  | "projectCustomerNeedsShowImportantFirst"
+  | "showParents"
+  | "fieldPreviewLinks"
+  | "showReadItems"
+  | "showSnoozedItems"
+  | "showSubInitiativeProjects"
+  | "showNestedInitiatives"
+  | "showSubIssues"
+  | "showSubTeamIssues"
+  | "showSubTeamProjects"
+  | "showSupervisedIssues"
+  | "fieldSla"
+  | "fieldSentryIssues"
+  | "customViewFieldDateCreated"
+  | "customViewFieldOwner"
+  | "customViewFieldDateUpdated"
+  | "customViewFieldVisibility"
+  | "customerFieldDomains"
+  | "customerFieldOwner"
+  | "customerFieldRequestCount"
+  | "fieldCustomerCount"
+  | "customerFieldRevenue"
+  | "fieldCustomerRevenue"
+  | "customerFieldSize"
+  | "customerFieldSource"
+  | "customerFieldStatus"
+  | "customerFieldTier"
+  | "fieldCycle"
+  | "dashboardFieldDateCreated"
+  | "dashboardFieldOwner"
+  | "dashboardFieldDateUpdated"
+  | "fieldDueDate"
+  | "initiativeFieldHealth"
+  | "initiativeFieldActivity"
+  | "initiativeFieldDescription"
+  | "initiativeFieldInitiativeHealth"
+  | "initiativeFieldOwner"
+  | "initiativeFieldProjects"
+  | "initiativeFieldTargetDate"
+  | "initiativeFieldTeams"
+  | "fieldDateArchived"
+  | "fieldAssignee"
+  | "fieldDateCreated"
+  | "customerPageNeedsFieldIssueTargetDueDate"
+  | "fieldEstimate"
+  | "customerPageNeedsFieldIssueIdentifier"
+  | "fieldId"
+  | "fieldDateMyActivity"
+  | "customerPageNeedsFieldIssuePriority"
+  | "fieldPriority"
+  | "customerPageNeedsFieldIssueStatus"
+  | "fieldStatus"
+  | "fieldDateUpdated"
+  | "fieldLabels"
+  | "fieldLinkCount"
+  | "memberFieldJoined"
+  | "memberFieldStatus"
+  | "memberFieldTeams"
+  | "fieldMilestone"
+  | "projectFieldActivity"
+  | "projectFieldDateCompleted"
+  | "projectFieldDateCreated"
+  | "projectFieldCustomerCount"
+  | "projectFieldCustomerRevenue"
+  | "projectFieldDescriptionBoard"
+  | "projectFieldDescription"
+  | "fieldProject"
+  | "projectFieldHealthTimeline"
+  | "projectFieldHealth"
+  | "projectFieldInitiatives"
+  | "projectFieldLabels"
+  | "projectFieldLeadTimeline"
+  | "projectFieldLead"
+  | "projectFieldMembersBoard"
+  | "projectFieldMembersList"
+  | "projectFieldMembersTimeline"
+  | "projectFieldMembers"
+  | "projectFieldMilestoneTimeline"
+  | "projectFieldMilestone"
+  | "projectFieldPredictionsTimeline"
+  | "projectFieldPredictions"
+  | "projectFieldPriority"
+  | "projectFieldRelationsTimeline"
+  | "projectFieldRelations"
+  | "projectFieldRoadmapsBoard"
+  | "projectFieldRoadmapsList"
+  | "projectFieldRoadmapsTimeline"
+  | "projectFieldRoadmaps"
+  | "projectFieldRolloutStage"
+  | "projectFieldStartDate"
+  | "projectFieldStatusTimeline"
+  | "projectFieldStatus"
+  | "projectFieldTargetDate"
+  | "projectFieldTeamsBoard"
+  | "projectFieldTeamsList"
+  | "projectFieldTeamsTimeline"
+  | "projectFieldTeams"
+  | "projectFieldDateUpdated"
+  | "fieldPullRequests"
+  | "fieldRelease"
+  | "reviewFieldAvatar"
+  | "reviewFieldChecks"
+  | "reviewFieldIdentifier"
+  | "reviewFieldPreviewLinks"
+  | "reviewFieldRepository"
+  | "teamFieldDateCreated"
+  | "teamFieldCycle"
+  | "teamFieldIdentifier"
+  | "teamFieldMembers"
+  | "teamFieldMembership"
+  | "teamFieldOwner"
+  | "teamFieldProjects"
+  | "teamFieldDateUpdated"
+  | "fieldTimeInCurrentStatus"
+  | "showTriageIssues"
+  | "showUnreadItemsFirst"
+  | "timelineChronologyShowWeekNumbers"
+> & {
+    projectLabelGroupColumns?: Maybe<
+      Array<
+        { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+          ViewPreferencesProjectLabelGroupColumn,
+          "id" | "active"
+        >
+      >
+    >;
+  };
 
 export type WebhookConnectionFragment = { __typename: "WebhookConnection" } & {
   nodes: Array<
@@ -33938,71 +36393,6 @@ export type ApplicationInfoQuery = { __typename?: "Query" } & {
   >;
 };
 
-export type AsksWebSettingQueryVariables = Exact<{
-  id: Scalars["String"];
-}>;
-
-export type AsksWebSettingQuery = { __typename?: "Query" } & {
-  asksWebSetting: { __typename: "AsksWebSettings" } & Pick<
-    AsksWebSettings,
-    "domain" | "updatedAt" | "archivedAt" | "createdAt" | "id"
-  > & {
-      emailIntakeAddress?: Maybe<{ __typename?: "EmailIntakeAddress" } & Pick<EmailIntakeAddress, "id">>;
-      identityProvider?: Maybe<
-        { __typename: "IdentityProvider" } & Pick<
-          IdentityProvider,
-          | "ssoBinding"
-          | "ssoEndpoint"
-          | "priority"
-          | "ssoSignAlgo"
-          | "issuerEntityId"
-          | "updatedAt"
-          | "spEntityId"
-          | "archivedAt"
-          | "createdAt"
-          | "type"
-          | "id"
-          | "samlEnabled"
-          | "scimEnabled"
-          | "defaultMigrated"
-          | "allowNameChange"
-          | "ssoSigningCert"
-        >
-      >;
-      creator?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
-    };
-};
-
-export type AsksWebSetting_IdentityProviderQueryVariables = Exact<{
-  id: Scalars["String"];
-}>;
-
-export type AsksWebSetting_IdentityProviderQuery = { __typename?: "Query" } & {
-  asksWebSetting: { __typename?: "AsksWebSettings" } & {
-    identityProvider?: Maybe<
-      { __typename: "IdentityProvider" } & Pick<
-        IdentityProvider,
-        | "ssoBinding"
-        | "ssoEndpoint"
-        | "priority"
-        | "ssoSignAlgo"
-        | "issuerEntityId"
-        | "updatedAt"
-        | "spEntityId"
-        | "archivedAt"
-        | "createdAt"
-        | "type"
-        | "id"
-        | "samlEnabled"
-        | "scimEnabled"
-        | "defaultMigrated"
-        | "allowNameChange"
-        | "ssoSigningCert"
-      >
-    >;
-  };
-};
-
 export type AttachmentQueryVariables = Exact<{
   id: Scalars["String"];
 }>;
@@ -34088,6 +36478,48 @@ export type AttachmentIssueQuery = { __typename?: "Query" } & {
             user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
           }
       >;
+      sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+        IssueSharedAccess,
+        "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+      > & {
+          sharedWithUsers: Array<
+            { __typename: "User" } & Pick<
+              User,
+              | "statusUntilAt"
+              | "description"
+              | "avatarUrl"
+              | "createdIssueCount"
+              | "disableReason"
+              | "avatarBackgroundColor"
+              | "statusEmoji"
+              | "initials"
+              | "statusLabel"
+              | "updatedAt"
+              | "lastSeen"
+              | "timezone"
+              | "archivedAt"
+              | "createdAt"
+              | "id"
+              | "gitHubUserId"
+              | "displayName"
+              | "email"
+              | "name"
+              | "url"
+              | "active"
+              | "guest"
+              | "app"
+              | "admin"
+              | "owner"
+              | "isAssignable"
+              | "isMentionable"
+              | "isMe"
+              | "supportsAgentSessions"
+              | "canAccessAnyPublicTeam"
+              | "calendarHash"
+              | "inviteHash"
+            >
+          >;
+        };
       delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
       botActor?: Maybe<
         { __typename: "ActorBot" } & Pick<
@@ -34258,6 +36690,48 @@ export type AttachmentIssue_ChildrenQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -35018,6 +37492,57 @@ export type AttachmentIssue_RelationsQuery = { __typename?: "Query" } & {
   };
 };
 
+export type AttachmentIssue_SharedAccessQueryVariables = Exact<{
+  id: Scalars["String"];
+}>;
+
+export type AttachmentIssue_SharedAccessQuery = { __typename?: "Query" } & {
+  attachmentIssue: { __typename?: "Issue" } & {
+    sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+      IssueSharedAccess,
+      "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+    > & {
+        sharedWithUsers: Array<
+          { __typename: "User" } & Pick<
+            User,
+            | "statusUntilAt"
+            | "description"
+            | "avatarUrl"
+            | "createdIssueCount"
+            | "disableReason"
+            | "avatarBackgroundColor"
+            | "statusEmoji"
+            | "initials"
+            | "statusLabel"
+            | "updatedAt"
+            | "lastSeen"
+            | "timezone"
+            | "archivedAt"
+            | "createdAt"
+            | "id"
+            | "gitHubUserId"
+            | "displayName"
+            | "email"
+            | "name"
+            | "url"
+            | "active"
+            | "guest"
+            | "app"
+            | "admin"
+            | "owner"
+            | "isAssignable"
+            | "isMentionable"
+            | "isMe"
+            | "supportsAgentSessions"
+            | "canAccessAnyPublicTeam"
+            | "calendarHash"
+            | "inviteHash"
+          >
+        >;
+      };
+  };
+};
+
 export type AttachmentIssue_StateHistoryQueryVariables = Exact<{
   id: Scalars["String"];
   after?: InputMaybe<Scalars["String"]>;
@@ -35681,6 +38206,48 @@ export type Comment_CreatedIssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -35981,8 +38548,198 @@ export type CustomViewQuery = { __typename?: "Query" } & {
       viewPreferencesValues?: Maybe<
         { __typename: "ViewPreferencesValues" } & Pick<
           ViewPreferencesValues,
-          "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-        >
+          | "issueNesting"
+          | "projectShowEmptyGroupsBoard"
+          | "projectShowEmptyGroupsList"
+          | "projectShowEmptyGroupsTimeline"
+          | "projectShowEmptyGroups"
+          | "projectShowEmptySubGroupsBoard"
+          | "projectShowEmptySubGroupsList"
+          | "projectShowEmptySubGroupsTimeline"
+          | "projectShowEmptySubGroups"
+          | "hiddenColumns"
+          | "hiddenRows"
+          | "timelineChronologyShowCycleTeamIds"
+          | "customViewsOrdering"
+          | "customerPageNeedsViewGrouping"
+          | "customerPageNeedsViewOrdering"
+          | "customersViewOrdering"
+          | "dashboardsOrdering"
+          | "projectGroupingDateResolution"
+          | "viewOrderingDirection"
+          | "embeddedCustomerNeedsViewOrdering"
+          | "inboxViewOrdering"
+          | "initiativeGrouping"
+          | "initiativesViewOrdering"
+          | "issueGrouping"
+          | "layout"
+          | "viewOrdering"
+          | "issueSubGrouping"
+          | "issueGroupingLabelGroupId"
+          | "issueSubGroupingLabelGroupId"
+          | "projectGroupingLabelGroupId"
+          | "projectSubGroupingLabelGroupId"
+          | "projectGroupOrdering"
+          | "projectCustomerNeedsViewGrouping"
+          | "projectCustomerNeedsViewOrdering"
+          | "projectGrouping"
+          | "projectLayout"
+          | "projectViewOrdering"
+          | "projectSubGrouping"
+          | "releasePipelinesViewOrdering"
+          | "reviewGrouping"
+          | "reviewViewOrdering"
+          | "searchResultType"
+          | "searchViewOrdering"
+          | "teamViewOrdering"
+          | "triageViewOrdering"
+          | "workspaceMembersViewOrdering"
+          | "projectZoomLevel"
+          | "timelineZoomScale"
+          | "showCompletedAgentSessions"
+          | "showCompletedIssues"
+          | "showCompletedProjects"
+          | "showCompletedReviews"
+          | "closedIssuesOrderedByRecency"
+          | "showArchivedItems"
+          | "customerPageNeedsShowCompletedIssuesAndProjects"
+          | "projectCustomerNeedsShowCompletedIssuesLast"
+          | "showDraftReviews"
+          | "showEmptyGroupsBoard"
+          | "showEmptyGroupsList"
+          | "showEmptyGroups"
+          | "showEmptySubGroupsBoard"
+          | "showEmptySubGroupsList"
+          | "showEmptySubGroups"
+          | "customerPageNeedsShowImportantFirst"
+          | "embeddedCustomerNeedsShowImportantFirst"
+          | "projectCustomerNeedsShowImportantFirst"
+          | "showParents"
+          | "fieldPreviewLinks"
+          | "showReadItems"
+          | "showSnoozedItems"
+          | "showSubInitiativeProjects"
+          | "showNestedInitiatives"
+          | "showSubIssues"
+          | "showSubTeamIssues"
+          | "showSubTeamProjects"
+          | "showSupervisedIssues"
+          | "fieldSla"
+          | "fieldSentryIssues"
+          | "customViewFieldDateCreated"
+          | "customViewFieldOwner"
+          | "customViewFieldDateUpdated"
+          | "customViewFieldVisibility"
+          | "customerFieldDomains"
+          | "customerFieldOwner"
+          | "customerFieldRequestCount"
+          | "fieldCustomerCount"
+          | "customerFieldRevenue"
+          | "fieldCustomerRevenue"
+          | "customerFieldSize"
+          | "customerFieldSource"
+          | "customerFieldStatus"
+          | "customerFieldTier"
+          | "fieldCycle"
+          | "dashboardFieldDateCreated"
+          | "dashboardFieldOwner"
+          | "dashboardFieldDateUpdated"
+          | "fieldDueDate"
+          | "initiativeFieldHealth"
+          | "initiativeFieldActivity"
+          | "initiativeFieldDescription"
+          | "initiativeFieldInitiativeHealth"
+          | "initiativeFieldOwner"
+          | "initiativeFieldProjects"
+          | "initiativeFieldTargetDate"
+          | "initiativeFieldTeams"
+          | "fieldDateArchived"
+          | "fieldAssignee"
+          | "fieldDateCreated"
+          | "customerPageNeedsFieldIssueTargetDueDate"
+          | "fieldEstimate"
+          | "customerPageNeedsFieldIssueIdentifier"
+          | "fieldId"
+          | "fieldDateMyActivity"
+          | "customerPageNeedsFieldIssuePriority"
+          | "fieldPriority"
+          | "customerPageNeedsFieldIssueStatus"
+          | "fieldStatus"
+          | "fieldDateUpdated"
+          | "fieldLabels"
+          | "fieldLinkCount"
+          | "memberFieldJoined"
+          | "memberFieldStatus"
+          | "memberFieldTeams"
+          | "fieldMilestone"
+          | "projectFieldActivity"
+          | "projectFieldDateCompleted"
+          | "projectFieldDateCreated"
+          | "projectFieldCustomerCount"
+          | "projectFieldCustomerRevenue"
+          | "projectFieldDescriptionBoard"
+          | "projectFieldDescription"
+          | "fieldProject"
+          | "projectFieldHealthTimeline"
+          | "projectFieldHealth"
+          | "projectFieldInitiatives"
+          | "projectFieldLabels"
+          | "projectFieldLeadTimeline"
+          | "projectFieldLead"
+          | "projectFieldMembersBoard"
+          | "projectFieldMembersList"
+          | "projectFieldMembersTimeline"
+          | "projectFieldMembers"
+          | "projectFieldMilestoneTimeline"
+          | "projectFieldMilestone"
+          | "projectFieldPredictionsTimeline"
+          | "projectFieldPredictions"
+          | "projectFieldPriority"
+          | "projectFieldRelationsTimeline"
+          | "projectFieldRelations"
+          | "projectFieldRoadmapsBoard"
+          | "projectFieldRoadmapsList"
+          | "projectFieldRoadmapsTimeline"
+          | "projectFieldRoadmaps"
+          | "projectFieldRolloutStage"
+          | "projectFieldStartDate"
+          | "projectFieldStatusTimeline"
+          | "projectFieldStatus"
+          | "projectFieldTargetDate"
+          | "projectFieldTeamsBoard"
+          | "projectFieldTeamsList"
+          | "projectFieldTeamsTimeline"
+          | "projectFieldTeams"
+          | "projectFieldDateUpdated"
+          | "fieldPullRequests"
+          | "fieldRelease"
+          | "reviewFieldAvatar"
+          | "reviewFieldChecks"
+          | "reviewFieldIdentifier"
+          | "reviewFieldPreviewLinks"
+          | "reviewFieldRepository"
+          | "teamFieldDateCreated"
+          | "teamFieldCycle"
+          | "teamFieldIdentifier"
+          | "teamFieldMembers"
+          | "teamFieldMembership"
+          | "teamFieldOwner"
+          | "teamFieldProjects"
+          | "teamFieldDateUpdated"
+          | "fieldTimeInCurrentStatus"
+          | "showTriageIssues"
+          | "showUnreadItemsFirst"
+          | "timelineChronologyShowWeekNumbers"
+        > & {
+            projectLabelGroupColumns?: Maybe<
+              Array<
+                { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                  ViewPreferencesProjectLabelGroupColumn,
+                  "id" | "active"
+                >
+              >
+            >;
+          }
       >;
       userViewPreferences?: Maybe<
         { __typename: "ViewPreferences" } & Pick<
@@ -35991,8 +38748,198 @@ export type CustomViewQuery = { __typename?: "Query" } & {
         > & {
             preferences: { __typename: "ViewPreferencesValues" } & Pick<
               ViewPreferencesValues,
-              "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-            >;
+              | "issueNesting"
+              | "projectShowEmptyGroupsBoard"
+              | "projectShowEmptyGroupsList"
+              | "projectShowEmptyGroupsTimeline"
+              | "projectShowEmptyGroups"
+              | "projectShowEmptySubGroupsBoard"
+              | "projectShowEmptySubGroupsList"
+              | "projectShowEmptySubGroupsTimeline"
+              | "projectShowEmptySubGroups"
+              | "hiddenColumns"
+              | "hiddenRows"
+              | "timelineChronologyShowCycleTeamIds"
+              | "customViewsOrdering"
+              | "customerPageNeedsViewGrouping"
+              | "customerPageNeedsViewOrdering"
+              | "customersViewOrdering"
+              | "dashboardsOrdering"
+              | "projectGroupingDateResolution"
+              | "viewOrderingDirection"
+              | "embeddedCustomerNeedsViewOrdering"
+              | "inboxViewOrdering"
+              | "initiativeGrouping"
+              | "initiativesViewOrdering"
+              | "issueGrouping"
+              | "layout"
+              | "viewOrdering"
+              | "issueSubGrouping"
+              | "issueGroupingLabelGroupId"
+              | "issueSubGroupingLabelGroupId"
+              | "projectGroupingLabelGroupId"
+              | "projectSubGroupingLabelGroupId"
+              | "projectGroupOrdering"
+              | "projectCustomerNeedsViewGrouping"
+              | "projectCustomerNeedsViewOrdering"
+              | "projectGrouping"
+              | "projectLayout"
+              | "projectViewOrdering"
+              | "projectSubGrouping"
+              | "releasePipelinesViewOrdering"
+              | "reviewGrouping"
+              | "reviewViewOrdering"
+              | "searchResultType"
+              | "searchViewOrdering"
+              | "teamViewOrdering"
+              | "triageViewOrdering"
+              | "workspaceMembersViewOrdering"
+              | "projectZoomLevel"
+              | "timelineZoomScale"
+              | "showCompletedAgentSessions"
+              | "showCompletedIssues"
+              | "showCompletedProjects"
+              | "showCompletedReviews"
+              | "closedIssuesOrderedByRecency"
+              | "showArchivedItems"
+              | "customerPageNeedsShowCompletedIssuesAndProjects"
+              | "projectCustomerNeedsShowCompletedIssuesLast"
+              | "showDraftReviews"
+              | "showEmptyGroupsBoard"
+              | "showEmptyGroupsList"
+              | "showEmptyGroups"
+              | "showEmptySubGroupsBoard"
+              | "showEmptySubGroupsList"
+              | "showEmptySubGroups"
+              | "customerPageNeedsShowImportantFirst"
+              | "embeddedCustomerNeedsShowImportantFirst"
+              | "projectCustomerNeedsShowImportantFirst"
+              | "showParents"
+              | "fieldPreviewLinks"
+              | "showReadItems"
+              | "showSnoozedItems"
+              | "showSubInitiativeProjects"
+              | "showNestedInitiatives"
+              | "showSubIssues"
+              | "showSubTeamIssues"
+              | "showSubTeamProjects"
+              | "showSupervisedIssues"
+              | "fieldSla"
+              | "fieldSentryIssues"
+              | "customViewFieldDateCreated"
+              | "customViewFieldOwner"
+              | "customViewFieldDateUpdated"
+              | "customViewFieldVisibility"
+              | "customerFieldDomains"
+              | "customerFieldOwner"
+              | "customerFieldRequestCount"
+              | "fieldCustomerCount"
+              | "customerFieldRevenue"
+              | "fieldCustomerRevenue"
+              | "customerFieldSize"
+              | "customerFieldSource"
+              | "customerFieldStatus"
+              | "customerFieldTier"
+              | "fieldCycle"
+              | "dashboardFieldDateCreated"
+              | "dashboardFieldOwner"
+              | "dashboardFieldDateUpdated"
+              | "fieldDueDate"
+              | "initiativeFieldHealth"
+              | "initiativeFieldActivity"
+              | "initiativeFieldDescription"
+              | "initiativeFieldInitiativeHealth"
+              | "initiativeFieldOwner"
+              | "initiativeFieldProjects"
+              | "initiativeFieldTargetDate"
+              | "initiativeFieldTeams"
+              | "fieldDateArchived"
+              | "fieldAssignee"
+              | "fieldDateCreated"
+              | "customerPageNeedsFieldIssueTargetDueDate"
+              | "fieldEstimate"
+              | "customerPageNeedsFieldIssueIdentifier"
+              | "fieldId"
+              | "fieldDateMyActivity"
+              | "customerPageNeedsFieldIssuePriority"
+              | "fieldPriority"
+              | "customerPageNeedsFieldIssueStatus"
+              | "fieldStatus"
+              | "fieldDateUpdated"
+              | "fieldLabels"
+              | "fieldLinkCount"
+              | "memberFieldJoined"
+              | "memberFieldStatus"
+              | "memberFieldTeams"
+              | "fieldMilestone"
+              | "projectFieldActivity"
+              | "projectFieldDateCompleted"
+              | "projectFieldDateCreated"
+              | "projectFieldCustomerCount"
+              | "projectFieldCustomerRevenue"
+              | "projectFieldDescriptionBoard"
+              | "projectFieldDescription"
+              | "fieldProject"
+              | "projectFieldHealthTimeline"
+              | "projectFieldHealth"
+              | "projectFieldInitiatives"
+              | "projectFieldLabels"
+              | "projectFieldLeadTimeline"
+              | "projectFieldLead"
+              | "projectFieldMembersBoard"
+              | "projectFieldMembersList"
+              | "projectFieldMembersTimeline"
+              | "projectFieldMembers"
+              | "projectFieldMilestoneTimeline"
+              | "projectFieldMilestone"
+              | "projectFieldPredictionsTimeline"
+              | "projectFieldPredictions"
+              | "projectFieldPriority"
+              | "projectFieldRelationsTimeline"
+              | "projectFieldRelations"
+              | "projectFieldRoadmapsBoard"
+              | "projectFieldRoadmapsList"
+              | "projectFieldRoadmapsTimeline"
+              | "projectFieldRoadmaps"
+              | "projectFieldRolloutStage"
+              | "projectFieldStartDate"
+              | "projectFieldStatusTimeline"
+              | "projectFieldStatus"
+              | "projectFieldTargetDate"
+              | "projectFieldTeamsBoard"
+              | "projectFieldTeamsList"
+              | "projectFieldTeamsTimeline"
+              | "projectFieldTeams"
+              | "projectFieldDateUpdated"
+              | "fieldPullRequests"
+              | "fieldRelease"
+              | "reviewFieldAvatar"
+              | "reviewFieldChecks"
+              | "reviewFieldIdentifier"
+              | "reviewFieldPreviewLinks"
+              | "reviewFieldRepository"
+              | "teamFieldDateCreated"
+              | "teamFieldCycle"
+              | "teamFieldIdentifier"
+              | "teamFieldMembers"
+              | "teamFieldMembership"
+              | "teamFieldOwner"
+              | "teamFieldProjects"
+              | "teamFieldDateUpdated"
+              | "fieldTimeInCurrentStatus"
+              | "showTriageIssues"
+              | "showUnreadItemsFirst"
+              | "timelineChronologyShowWeekNumbers"
+            > & {
+                projectLabelGroupColumns?: Maybe<
+                  Array<
+                    { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                      ViewPreferencesProjectLabelGroupColumn,
+                      "id" | "active"
+                    >
+                  >
+                >;
+              };
           }
       >;
       organizationViewPreferences?: Maybe<
@@ -36002,8 +38949,198 @@ export type CustomViewQuery = { __typename?: "Query" } & {
         > & {
             preferences: { __typename: "ViewPreferencesValues" } & Pick<
               ViewPreferencesValues,
-              "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-            >;
+              | "issueNesting"
+              | "projectShowEmptyGroupsBoard"
+              | "projectShowEmptyGroupsList"
+              | "projectShowEmptyGroupsTimeline"
+              | "projectShowEmptyGroups"
+              | "projectShowEmptySubGroupsBoard"
+              | "projectShowEmptySubGroupsList"
+              | "projectShowEmptySubGroupsTimeline"
+              | "projectShowEmptySubGroups"
+              | "hiddenColumns"
+              | "hiddenRows"
+              | "timelineChronologyShowCycleTeamIds"
+              | "customViewsOrdering"
+              | "customerPageNeedsViewGrouping"
+              | "customerPageNeedsViewOrdering"
+              | "customersViewOrdering"
+              | "dashboardsOrdering"
+              | "projectGroupingDateResolution"
+              | "viewOrderingDirection"
+              | "embeddedCustomerNeedsViewOrdering"
+              | "inboxViewOrdering"
+              | "initiativeGrouping"
+              | "initiativesViewOrdering"
+              | "issueGrouping"
+              | "layout"
+              | "viewOrdering"
+              | "issueSubGrouping"
+              | "issueGroupingLabelGroupId"
+              | "issueSubGroupingLabelGroupId"
+              | "projectGroupingLabelGroupId"
+              | "projectSubGroupingLabelGroupId"
+              | "projectGroupOrdering"
+              | "projectCustomerNeedsViewGrouping"
+              | "projectCustomerNeedsViewOrdering"
+              | "projectGrouping"
+              | "projectLayout"
+              | "projectViewOrdering"
+              | "projectSubGrouping"
+              | "releasePipelinesViewOrdering"
+              | "reviewGrouping"
+              | "reviewViewOrdering"
+              | "searchResultType"
+              | "searchViewOrdering"
+              | "teamViewOrdering"
+              | "triageViewOrdering"
+              | "workspaceMembersViewOrdering"
+              | "projectZoomLevel"
+              | "timelineZoomScale"
+              | "showCompletedAgentSessions"
+              | "showCompletedIssues"
+              | "showCompletedProjects"
+              | "showCompletedReviews"
+              | "closedIssuesOrderedByRecency"
+              | "showArchivedItems"
+              | "customerPageNeedsShowCompletedIssuesAndProjects"
+              | "projectCustomerNeedsShowCompletedIssuesLast"
+              | "showDraftReviews"
+              | "showEmptyGroupsBoard"
+              | "showEmptyGroupsList"
+              | "showEmptyGroups"
+              | "showEmptySubGroupsBoard"
+              | "showEmptySubGroupsList"
+              | "showEmptySubGroups"
+              | "customerPageNeedsShowImportantFirst"
+              | "embeddedCustomerNeedsShowImportantFirst"
+              | "projectCustomerNeedsShowImportantFirst"
+              | "showParents"
+              | "fieldPreviewLinks"
+              | "showReadItems"
+              | "showSnoozedItems"
+              | "showSubInitiativeProjects"
+              | "showNestedInitiatives"
+              | "showSubIssues"
+              | "showSubTeamIssues"
+              | "showSubTeamProjects"
+              | "showSupervisedIssues"
+              | "fieldSla"
+              | "fieldSentryIssues"
+              | "customViewFieldDateCreated"
+              | "customViewFieldOwner"
+              | "customViewFieldDateUpdated"
+              | "customViewFieldVisibility"
+              | "customerFieldDomains"
+              | "customerFieldOwner"
+              | "customerFieldRequestCount"
+              | "fieldCustomerCount"
+              | "customerFieldRevenue"
+              | "fieldCustomerRevenue"
+              | "customerFieldSize"
+              | "customerFieldSource"
+              | "customerFieldStatus"
+              | "customerFieldTier"
+              | "fieldCycle"
+              | "dashboardFieldDateCreated"
+              | "dashboardFieldOwner"
+              | "dashboardFieldDateUpdated"
+              | "fieldDueDate"
+              | "initiativeFieldHealth"
+              | "initiativeFieldActivity"
+              | "initiativeFieldDescription"
+              | "initiativeFieldInitiativeHealth"
+              | "initiativeFieldOwner"
+              | "initiativeFieldProjects"
+              | "initiativeFieldTargetDate"
+              | "initiativeFieldTeams"
+              | "fieldDateArchived"
+              | "fieldAssignee"
+              | "fieldDateCreated"
+              | "customerPageNeedsFieldIssueTargetDueDate"
+              | "fieldEstimate"
+              | "customerPageNeedsFieldIssueIdentifier"
+              | "fieldId"
+              | "fieldDateMyActivity"
+              | "customerPageNeedsFieldIssuePriority"
+              | "fieldPriority"
+              | "customerPageNeedsFieldIssueStatus"
+              | "fieldStatus"
+              | "fieldDateUpdated"
+              | "fieldLabels"
+              | "fieldLinkCount"
+              | "memberFieldJoined"
+              | "memberFieldStatus"
+              | "memberFieldTeams"
+              | "fieldMilestone"
+              | "projectFieldActivity"
+              | "projectFieldDateCompleted"
+              | "projectFieldDateCreated"
+              | "projectFieldCustomerCount"
+              | "projectFieldCustomerRevenue"
+              | "projectFieldDescriptionBoard"
+              | "projectFieldDescription"
+              | "fieldProject"
+              | "projectFieldHealthTimeline"
+              | "projectFieldHealth"
+              | "projectFieldInitiatives"
+              | "projectFieldLabels"
+              | "projectFieldLeadTimeline"
+              | "projectFieldLead"
+              | "projectFieldMembersBoard"
+              | "projectFieldMembersList"
+              | "projectFieldMembersTimeline"
+              | "projectFieldMembers"
+              | "projectFieldMilestoneTimeline"
+              | "projectFieldMilestone"
+              | "projectFieldPredictionsTimeline"
+              | "projectFieldPredictions"
+              | "projectFieldPriority"
+              | "projectFieldRelationsTimeline"
+              | "projectFieldRelations"
+              | "projectFieldRoadmapsBoard"
+              | "projectFieldRoadmapsList"
+              | "projectFieldRoadmapsTimeline"
+              | "projectFieldRoadmaps"
+              | "projectFieldRolloutStage"
+              | "projectFieldStartDate"
+              | "projectFieldStatusTimeline"
+              | "projectFieldStatus"
+              | "projectFieldTargetDate"
+              | "projectFieldTeamsBoard"
+              | "projectFieldTeamsList"
+              | "projectFieldTeamsTimeline"
+              | "projectFieldTeams"
+              | "projectFieldDateUpdated"
+              | "fieldPullRequests"
+              | "fieldRelease"
+              | "reviewFieldAvatar"
+              | "reviewFieldChecks"
+              | "reviewFieldIdentifier"
+              | "reviewFieldPreviewLinks"
+              | "reviewFieldRepository"
+              | "teamFieldDateCreated"
+              | "teamFieldCycle"
+              | "teamFieldIdentifier"
+              | "teamFieldMembers"
+              | "teamFieldMembership"
+              | "teamFieldOwner"
+              | "teamFieldProjects"
+              | "teamFieldDateUpdated"
+              | "fieldTimeInCurrentStatus"
+              | "showTriageIssues"
+              | "showUnreadItemsFirst"
+              | "timelineChronologyShowWeekNumbers"
+            > & {
+                projectLabelGroupColumns?: Maybe<
+                  Array<
+                    { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                      ViewPreferencesProjectLabelGroupColumn,
+                      "id" | "active"
+                    >
+                  >
+                >;
+              };
           }
       >;
       team?: Maybe<{ __typename?: "Team" } & Pick<Team, "id">>;
@@ -36165,6 +39302,48 @@ export type CustomView_IssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -36231,8 +39410,198 @@ export type CustomView_OrganizationViewPreferencesQuery = { __typename?: "Query"
       > & {
           preferences: { __typename: "ViewPreferencesValues" } & Pick<
             ViewPreferencesValues,
-            "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-          >;
+            | "issueNesting"
+            | "projectShowEmptyGroupsBoard"
+            | "projectShowEmptyGroupsList"
+            | "projectShowEmptyGroupsTimeline"
+            | "projectShowEmptyGroups"
+            | "projectShowEmptySubGroupsBoard"
+            | "projectShowEmptySubGroupsList"
+            | "projectShowEmptySubGroupsTimeline"
+            | "projectShowEmptySubGroups"
+            | "hiddenColumns"
+            | "hiddenRows"
+            | "timelineChronologyShowCycleTeamIds"
+            | "customViewsOrdering"
+            | "customerPageNeedsViewGrouping"
+            | "customerPageNeedsViewOrdering"
+            | "customersViewOrdering"
+            | "dashboardsOrdering"
+            | "projectGroupingDateResolution"
+            | "viewOrderingDirection"
+            | "embeddedCustomerNeedsViewOrdering"
+            | "inboxViewOrdering"
+            | "initiativeGrouping"
+            | "initiativesViewOrdering"
+            | "issueGrouping"
+            | "layout"
+            | "viewOrdering"
+            | "issueSubGrouping"
+            | "issueGroupingLabelGroupId"
+            | "issueSubGroupingLabelGroupId"
+            | "projectGroupingLabelGroupId"
+            | "projectSubGroupingLabelGroupId"
+            | "projectGroupOrdering"
+            | "projectCustomerNeedsViewGrouping"
+            | "projectCustomerNeedsViewOrdering"
+            | "projectGrouping"
+            | "projectLayout"
+            | "projectViewOrdering"
+            | "projectSubGrouping"
+            | "releasePipelinesViewOrdering"
+            | "reviewGrouping"
+            | "reviewViewOrdering"
+            | "searchResultType"
+            | "searchViewOrdering"
+            | "teamViewOrdering"
+            | "triageViewOrdering"
+            | "workspaceMembersViewOrdering"
+            | "projectZoomLevel"
+            | "timelineZoomScale"
+            | "showCompletedAgentSessions"
+            | "showCompletedIssues"
+            | "showCompletedProjects"
+            | "showCompletedReviews"
+            | "closedIssuesOrderedByRecency"
+            | "showArchivedItems"
+            | "customerPageNeedsShowCompletedIssuesAndProjects"
+            | "projectCustomerNeedsShowCompletedIssuesLast"
+            | "showDraftReviews"
+            | "showEmptyGroupsBoard"
+            | "showEmptyGroupsList"
+            | "showEmptyGroups"
+            | "showEmptySubGroupsBoard"
+            | "showEmptySubGroupsList"
+            | "showEmptySubGroups"
+            | "customerPageNeedsShowImportantFirst"
+            | "embeddedCustomerNeedsShowImportantFirst"
+            | "projectCustomerNeedsShowImportantFirst"
+            | "showParents"
+            | "fieldPreviewLinks"
+            | "showReadItems"
+            | "showSnoozedItems"
+            | "showSubInitiativeProjects"
+            | "showNestedInitiatives"
+            | "showSubIssues"
+            | "showSubTeamIssues"
+            | "showSubTeamProjects"
+            | "showSupervisedIssues"
+            | "fieldSla"
+            | "fieldSentryIssues"
+            | "customViewFieldDateCreated"
+            | "customViewFieldOwner"
+            | "customViewFieldDateUpdated"
+            | "customViewFieldVisibility"
+            | "customerFieldDomains"
+            | "customerFieldOwner"
+            | "customerFieldRequestCount"
+            | "fieldCustomerCount"
+            | "customerFieldRevenue"
+            | "fieldCustomerRevenue"
+            | "customerFieldSize"
+            | "customerFieldSource"
+            | "customerFieldStatus"
+            | "customerFieldTier"
+            | "fieldCycle"
+            | "dashboardFieldDateCreated"
+            | "dashboardFieldOwner"
+            | "dashboardFieldDateUpdated"
+            | "fieldDueDate"
+            | "initiativeFieldHealth"
+            | "initiativeFieldActivity"
+            | "initiativeFieldDescription"
+            | "initiativeFieldInitiativeHealth"
+            | "initiativeFieldOwner"
+            | "initiativeFieldProjects"
+            | "initiativeFieldTargetDate"
+            | "initiativeFieldTeams"
+            | "fieldDateArchived"
+            | "fieldAssignee"
+            | "fieldDateCreated"
+            | "customerPageNeedsFieldIssueTargetDueDate"
+            | "fieldEstimate"
+            | "customerPageNeedsFieldIssueIdentifier"
+            | "fieldId"
+            | "fieldDateMyActivity"
+            | "customerPageNeedsFieldIssuePriority"
+            | "fieldPriority"
+            | "customerPageNeedsFieldIssueStatus"
+            | "fieldStatus"
+            | "fieldDateUpdated"
+            | "fieldLabels"
+            | "fieldLinkCount"
+            | "memberFieldJoined"
+            | "memberFieldStatus"
+            | "memberFieldTeams"
+            | "fieldMilestone"
+            | "projectFieldActivity"
+            | "projectFieldDateCompleted"
+            | "projectFieldDateCreated"
+            | "projectFieldCustomerCount"
+            | "projectFieldCustomerRevenue"
+            | "projectFieldDescriptionBoard"
+            | "projectFieldDescription"
+            | "fieldProject"
+            | "projectFieldHealthTimeline"
+            | "projectFieldHealth"
+            | "projectFieldInitiatives"
+            | "projectFieldLabels"
+            | "projectFieldLeadTimeline"
+            | "projectFieldLead"
+            | "projectFieldMembersBoard"
+            | "projectFieldMembersList"
+            | "projectFieldMembersTimeline"
+            | "projectFieldMembers"
+            | "projectFieldMilestoneTimeline"
+            | "projectFieldMilestone"
+            | "projectFieldPredictionsTimeline"
+            | "projectFieldPredictions"
+            | "projectFieldPriority"
+            | "projectFieldRelationsTimeline"
+            | "projectFieldRelations"
+            | "projectFieldRoadmapsBoard"
+            | "projectFieldRoadmapsList"
+            | "projectFieldRoadmapsTimeline"
+            | "projectFieldRoadmaps"
+            | "projectFieldRolloutStage"
+            | "projectFieldStartDate"
+            | "projectFieldStatusTimeline"
+            | "projectFieldStatus"
+            | "projectFieldTargetDate"
+            | "projectFieldTeamsBoard"
+            | "projectFieldTeamsList"
+            | "projectFieldTeamsTimeline"
+            | "projectFieldTeams"
+            | "projectFieldDateUpdated"
+            | "fieldPullRequests"
+            | "fieldRelease"
+            | "reviewFieldAvatar"
+            | "reviewFieldChecks"
+            | "reviewFieldIdentifier"
+            | "reviewFieldPreviewLinks"
+            | "reviewFieldRepository"
+            | "teamFieldDateCreated"
+            | "teamFieldCycle"
+            | "teamFieldIdentifier"
+            | "teamFieldMembers"
+            | "teamFieldMembership"
+            | "teamFieldOwner"
+            | "teamFieldProjects"
+            | "teamFieldDateUpdated"
+            | "fieldTimeInCurrentStatus"
+            | "showTriageIssues"
+            | "showUnreadItemsFirst"
+            | "timelineChronologyShowWeekNumbers"
+          > & {
+              projectLabelGroupColumns?: Maybe<
+                Array<
+                  { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                    ViewPreferencesProjectLabelGroupColumn,
+                    "id" | "active"
+                  >
+                >
+              >;
+            };
         }
     >;
   };
@@ -36248,8 +39617,198 @@ export type CustomView_OrganizationViewPreferences_PreferencesQuery = { __typena
       { __typename?: "ViewPreferences" } & {
         preferences: { __typename: "ViewPreferencesValues" } & Pick<
           ViewPreferencesValues,
-          "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-        >;
+          | "issueNesting"
+          | "projectShowEmptyGroupsBoard"
+          | "projectShowEmptyGroupsList"
+          | "projectShowEmptyGroupsTimeline"
+          | "projectShowEmptyGroups"
+          | "projectShowEmptySubGroupsBoard"
+          | "projectShowEmptySubGroupsList"
+          | "projectShowEmptySubGroupsTimeline"
+          | "projectShowEmptySubGroups"
+          | "hiddenColumns"
+          | "hiddenRows"
+          | "timelineChronologyShowCycleTeamIds"
+          | "customViewsOrdering"
+          | "customerPageNeedsViewGrouping"
+          | "customerPageNeedsViewOrdering"
+          | "customersViewOrdering"
+          | "dashboardsOrdering"
+          | "projectGroupingDateResolution"
+          | "viewOrderingDirection"
+          | "embeddedCustomerNeedsViewOrdering"
+          | "inboxViewOrdering"
+          | "initiativeGrouping"
+          | "initiativesViewOrdering"
+          | "issueGrouping"
+          | "layout"
+          | "viewOrdering"
+          | "issueSubGrouping"
+          | "issueGroupingLabelGroupId"
+          | "issueSubGroupingLabelGroupId"
+          | "projectGroupingLabelGroupId"
+          | "projectSubGroupingLabelGroupId"
+          | "projectGroupOrdering"
+          | "projectCustomerNeedsViewGrouping"
+          | "projectCustomerNeedsViewOrdering"
+          | "projectGrouping"
+          | "projectLayout"
+          | "projectViewOrdering"
+          | "projectSubGrouping"
+          | "releasePipelinesViewOrdering"
+          | "reviewGrouping"
+          | "reviewViewOrdering"
+          | "searchResultType"
+          | "searchViewOrdering"
+          | "teamViewOrdering"
+          | "triageViewOrdering"
+          | "workspaceMembersViewOrdering"
+          | "projectZoomLevel"
+          | "timelineZoomScale"
+          | "showCompletedAgentSessions"
+          | "showCompletedIssues"
+          | "showCompletedProjects"
+          | "showCompletedReviews"
+          | "closedIssuesOrderedByRecency"
+          | "showArchivedItems"
+          | "customerPageNeedsShowCompletedIssuesAndProjects"
+          | "projectCustomerNeedsShowCompletedIssuesLast"
+          | "showDraftReviews"
+          | "showEmptyGroupsBoard"
+          | "showEmptyGroupsList"
+          | "showEmptyGroups"
+          | "showEmptySubGroupsBoard"
+          | "showEmptySubGroupsList"
+          | "showEmptySubGroups"
+          | "customerPageNeedsShowImportantFirst"
+          | "embeddedCustomerNeedsShowImportantFirst"
+          | "projectCustomerNeedsShowImportantFirst"
+          | "showParents"
+          | "fieldPreviewLinks"
+          | "showReadItems"
+          | "showSnoozedItems"
+          | "showSubInitiativeProjects"
+          | "showNestedInitiatives"
+          | "showSubIssues"
+          | "showSubTeamIssues"
+          | "showSubTeamProjects"
+          | "showSupervisedIssues"
+          | "fieldSla"
+          | "fieldSentryIssues"
+          | "customViewFieldDateCreated"
+          | "customViewFieldOwner"
+          | "customViewFieldDateUpdated"
+          | "customViewFieldVisibility"
+          | "customerFieldDomains"
+          | "customerFieldOwner"
+          | "customerFieldRequestCount"
+          | "fieldCustomerCount"
+          | "customerFieldRevenue"
+          | "fieldCustomerRevenue"
+          | "customerFieldSize"
+          | "customerFieldSource"
+          | "customerFieldStatus"
+          | "customerFieldTier"
+          | "fieldCycle"
+          | "dashboardFieldDateCreated"
+          | "dashboardFieldOwner"
+          | "dashboardFieldDateUpdated"
+          | "fieldDueDate"
+          | "initiativeFieldHealth"
+          | "initiativeFieldActivity"
+          | "initiativeFieldDescription"
+          | "initiativeFieldInitiativeHealth"
+          | "initiativeFieldOwner"
+          | "initiativeFieldProjects"
+          | "initiativeFieldTargetDate"
+          | "initiativeFieldTeams"
+          | "fieldDateArchived"
+          | "fieldAssignee"
+          | "fieldDateCreated"
+          | "customerPageNeedsFieldIssueTargetDueDate"
+          | "fieldEstimate"
+          | "customerPageNeedsFieldIssueIdentifier"
+          | "fieldId"
+          | "fieldDateMyActivity"
+          | "customerPageNeedsFieldIssuePriority"
+          | "fieldPriority"
+          | "customerPageNeedsFieldIssueStatus"
+          | "fieldStatus"
+          | "fieldDateUpdated"
+          | "fieldLabels"
+          | "fieldLinkCount"
+          | "memberFieldJoined"
+          | "memberFieldStatus"
+          | "memberFieldTeams"
+          | "fieldMilestone"
+          | "projectFieldActivity"
+          | "projectFieldDateCompleted"
+          | "projectFieldDateCreated"
+          | "projectFieldCustomerCount"
+          | "projectFieldCustomerRevenue"
+          | "projectFieldDescriptionBoard"
+          | "projectFieldDescription"
+          | "fieldProject"
+          | "projectFieldHealthTimeline"
+          | "projectFieldHealth"
+          | "projectFieldInitiatives"
+          | "projectFieldLabels"
+          | "projectFieldLeadTimeline"
+          | "projectFieldLead"
+          | "projectFieldMembersBoard"
+          | "projectFieldMembersList"
+          | "projectFieldMembersTimeline"
+          | "projectFieldMembers"
+          | "projectFieldMilestoneTimeline"
+          | "projectFieldMilestone"
+          | "projectFieldPredictionsTimeline"
+          | "projectFieldPredictions"
+          | "projectFieldPriority"
+          | "projectFieldRelationsTimeline"
+          | "projectFieldRelations"
+          | "projectFieldRoadmapsBoard"
+          | "projectFieldRoadmapsList"
+          | "projectFieldRoadmapsTimeline"
+          | "projectFieldRoadmaps"
+          | "projectFieldRolloutStage"
+          | "projectFieldStartDate"
+          | "projectFieldStatusTimeline"
+          | "projectFieldStatus"
+          | "projectFieldTargetDate"
+          | "projectFieldTeamsBoard"
+          | "projectFieldTeamsList"
+          | "projectFieldTeamsTimeline"
+          | "projectFieldTeams"
+          | "projectFieldDateUpdated"
+          | "fieldPullRequests"
+          | "fieldRelease"
+          | "reviewFieldAvatar"
+          | "reviewFieldChecks"
+          | "reviewFieldIdentifier"
+          | "reviewFieldPreviewLinks"
+          | "reviewFieldRepository"
+          | "teamFieldDateCreated"
+          | "teamFieldCycle"
+          | "teamFieldIdentifier"
+          | "teamFieldMembers"
+          | "teamFieldMembership"
+          | "teamFieldOwner"
+          | "teamFieldProjects"
+          | "teamFieldDateUpdated"
+          | "fieldTimeInCurrentStatus"
+          | "showTriageIssues"
+          | "showUnreadItemsFirst"
+          | "timelineChronologyShowWeekNumbers"
+        > & {
+            projectLabelGroupColumns?: Maybe<
+              Array<
+                { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                  ViewPreferencesProjectLabelGroupColumn,
+                  "id" | "active"
+                >
+              >
+            >;
+          };
       }
     >;
   };
@@ -36344,6 +39903,26 @@ export type CustomView_ProjectsQuery = { __typename?: "Query" } & {
                   >;
                 }
             >;
+            syncedWith?: Maybe<
+              Array<
+                { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+                    metadata?: Maybe<
+                      | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                          ExternalEntityInfoGithubMetadata,
+                          "number" | "owner" | "repo"
+                        >)
+                      | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                          ExternalEntityInfoJiraMetadata,
+                          "issueTypeId" | "projectId" | "issueKey"
+                        >)
+                      | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                          ExternalEntitySlackMetadata,
+                          "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                        >)
+                    >;
+                  }
+              >
+            >;
             lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
             lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
             lead?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
@@ -36374,8 +39953,198 @@ export type CustomView_UserViewPreferencesQuery = { __typename?: "Query" } & {
       > & {
           preferences: { __typename: "ViewPreferencesValues" } & Pick<
             ViewPreferencesValues,
-            "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-          >;
+            | "issueNesting"
+            | "projectShowEmptyGroupsBoard"
+            | "projectShowEmptyGroupsList"
+            | "projectShowEmptyGroupsTimeline"
+            | "projectShowEmptyGroups"
+            | "projectShowEmptySubGroupsBoard"
+            | "projectShowEmptySubGroupsList"
+            | "projectShowEmptySubGroupsTimeline"
+            | "projectShowEmptySubGroups"
+            | "hiddenColumns"
+            | "hiddenRows"
+            | "timelineChronologyShowCycleTeamIds"
+            | "customViewsOrdering"
+            | "customerPageNeedsViewGrouping"
+            | "customerPageNeedsViewOrdering"
+            | "customersViewOrdering"
+            | "dashboardsOrdering"
+            | "projectGroupingDateResolution"
+            | "viewOrderingDirection"
+            | "embeddedCustomerNeedsViewOrdering"
+            | "inboxViewOrdering"
+            | "initiativeGrouping"
+            | "initiativesViewOrdering"
+            | "issueGrouping"
+            | "layout"
+            | "viewOrdering"
+            | "issueSubGrouping"
+            | "issueGroupingLabelGroupId"
+            | "issueSubGroupingLabelGroupId"
+            | "projectGroupingLabelGroupId"
+            | "projectSubGroupingLabelGroupId"
+            | "projectGroupOrdering"
+            | "projectCustomerNeedsViewGrouping"
+            | "projectCustomerNeedsViewOrdering"
+            | "projectGrouping"
+            | "projectLayout"
+            | "projectViewOrdering"
+            | "projectSubGrouping"
+            | "releasePipelinesViewOrdering"
+            | "reviewGrouping"
+            | "reviewViewOrdering"
+            | "searchResultType"
+            | "searchViewOrdering"
+            | "teamViewOrdering"
+            | "triageViewOrdering"
+            | "workspaceMembersViewOrdering"
+            | "projectZoomLevel"
+            | "timelineZoomScale"
+            | "showCompletedAgentSessions"
+            | "showCompletedIssues"
+            | "showCompletedProjects"
+            | "showCompletedReviews"
+            | "closedIssuesOrderedByRecency"
+            | "showArchivedItems"
+            | "customerPageNeedsShowCompletedIssuesAndProjects"
+            | "projectCustomerNeedsShowCompletedIssuesLast"
+            | "showDraftReviews"
+            | "showEmptyGroupsBoard"
+            | "showEmptyGroupsList"
+            | "showEmptyGroups"
+            | "showEmptySubGroupsBoard"
+            | "showEmptySubGroupsList"
+            | "showEmptySubGroups"
+            | "customerPageNeedsShowImportantFirst"
+            | "embeddedCustomerNeedsShowImportantFirst"
+            | "projectCustomerNeedsShowImportantFirst"
+            | "showParents"
+            | "fieldPreviewLinks"
+            | "showReadItems"
+            | "showSnoozedItems"
+            | "showSubInitiativeProjects"
+            | "showNestedInitiatives"
+            | "showSubIssues"
+            | "showSubTeamIssues"
+            | "showSubTeamProjects"
+            | "showSupervisedIssues"
+            | "fieldSla"
+            | "fieldSentryIssues"
+            | "customViewFieldDateCreated"
+            | "customViewFieldOwner"
+            | "customViewFieldDateUpdated"
+            | "customViewFieldVisibility"
+            | "customerFieldDomains"
+            | "customerFieldOwner"
+            | "customerFieldRequestCount"
+            | "fieldCustomerCount"
+            | "customerFieldRevenue"
+            | "fieldCustomerRevenue"
+            | "customerFieldSize"
+            | "customerFieldSource"
+            | "customerFieldStatus"
+            | "customerFieldTier"
+            | "fieldCycle"
+            | "dashboardFieldDateCreated"
+            | "dashboardFieldOwner"
+            | "dashboardFieldDateUpdated"
+            | "fieldDueDate"
+            | "initiativeFieldHealth"
+            | "initiativeFieldActivity"
+            | "initiativeFieldDescription"
+            | "initiativeFieldInitiativeHealth"
+            | "initiativeFieldOwner"
+            | "initiativeFieldProjects"
+            | "initiativeFieldTargetDate"
+            | "initiativeFieldTeams"
+            | "fieldDateArchived"
+            | "fieldAssignee"
+            | "fieldDateCreated"
+            | "customerPageNeedsFieldIssueTargetDueDate"
+            | "fieldEstimate"
+            | "customerPageNeedsFieldIssueIdentifier"
+            | "fieldId"
+            | "fieldDateMyActivity"
+            | "customerPageNeedsFieldIssuePriority"
+            | "fieldPriority"
+            | "customerPageNeedsFieldIssueStatus"
+            | "fieldStatus"
+            | "fieldDateUpdated"
+            | "fieldLabels"
+            | "fieldLinkCount"
+            | "memberFieldJoined"
+            | "memberFieldStatus"
+            | "memberFieldTeams"
+            | "fieldMilestone"
+            | "projectFieldActivity"
+            | "projectFieldDateCompleted"
+            | "projectFieldDateCreated"
+            | "projectFieldCustomerCount"
+            | "projectFieldCustomerRevenue"
+            | "projectFieldDescriptionBoard"
+            | "projectFieldDescription"
+            | "fieldProject"
+            | "projectFieldHealthTimeline"
+            | "projectFieldHealth"
+            | "projectFieldInitiatives"
+            | "projectFieldLabels"
+            | "projectFieldLeadTimeline"
+            | "projectFieldLead"
+            | "projectFieldMembersBoard"
+            | "projectFieldMembersList"
+            | "projectFieldMembersTimeline"
+            | "projectFieldMembers"
+            | "projectFieldMilestoneTimeline"
+            | "projectFieldMilestone"
+            | "projectFieldPredictionsTimeline"
+            | "projectFieldPredictions"
+            | "projectFieldPriority"
+            | "projectFieldRelationsTimeline"
+            | "projectFieldRelations"
+            | "projectFieldRoadmapsBoard"
+            | "projectFieldRoadmapsList"
+            | "projectFieldRoadmapsTimeline"
+            | "projectFieldRoadmaps"
+            | "projectFieldRolloutStage"
+            | "projectFieldStartDate"
+            | "projectFieldStatusTimeline"
+            | "projectFieldStatus"
+            | "projectFieldTargetDate"
+            | "projectFieldTeamsBoard"
+            | "projectFieldTeamsList"
+            | "projectFieldTeamsTimeline"
+            | "projectFieldTeams"
+            | "projectFieldDateUpdated"
+            | "fieldPullRequests"
+            | "fieldRelease"
+            | "reviewFieldAvatar"
+            | "reviewFieldChecks"
+            | "reviewFieldIdentifier"
+            | "reviewFieldPreviewLinks"
+            | "reviewFieldRepository"
+            | "teamFieldDateCreated"
+            | "teamFieldCycle"
+            | "teamFieldIdentifier"
+            | "teamFieldMembers"
+            | "teamFieldMembership"
+            | "teamFieldOwner"
+            | "teamFieldProjects"
+            | "teamFieldDateUpdated"
+            | "fieldTimeInCurrentStatus"
+            | "showTriageIssues"
+            | "showUnreadItemsFirst"
+            | "timelineChronologyShowWeekNumbers"
+          > & {
+              projectLabelGroupColumns?: Maybe<
+                Array<
+                  { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                    ViewPreferencesProjectLabelGroupColumn,
+                    "id" | "active"
+                  >
+                >
+              >;
+            };
         }
     >;
   };
@@ -36391,8 +40160,198 @@ export type CustomView_UserViewPreferences_PreferencesQuery = { __typename?: "Qu
       { __typename?: "ViewPreferences" } & {
         preferences: { __typename: "ViewPreferencesValues" } & Pick<
           ViewPreferencesValues,
-          "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-        >;
+          | "issueNesting"
+          | "projectShowEmptyGroupsBoard"
+          | "projectShowEmptyGroupsList"
+          | "projectShowEmptyGroupsTimeline"
+          | "projectShowEmptyGroups"
+          | "projectShowEmptySubGroupsBoard"
+          | "projectShowEmptySubGroupsList"
+          | "projectShowEmptySubGroupsTimeline"
+          | "projectShowEmptySubGroups"
+          | "hiddenColumns"
+          | "hiddenRows"
+          | "timelineChronologyShowCycleTeamIds"
+          | "customViewsOrdering"
+          | "customerPageNeedsViewGrouping"
+          | "customerPageNeedsViewOrdering"
+          | "customersViewOrdering"
+          | "dashboardsOrdering"
+          | "projectGroupingDateResolution"
+          | "viewOrderingDirection"
+          | "embeddedCustomerNeedsViewOrdering"
+          | "inboxViewOrdering"
+          | "initiativeGrouping"
+          | "initiativesViewOrdering"
+          | "issueGrouping"
+          | "layout"
+          | "viewOrdering"
+          | "issueSubGrouping"
+          | "issueGroupingLabelGroupId"
+          | "issueSubGroupingLabelGroupId"
+          | "projectGroupingLabelGroupId"
+          | "projectSubGroupingLabelGroupId"
+          | "projectGroupOrdering"
+          | "projectCustomerNeedsViewGrouping"
+          | "projectCustomerNeedsViewOrdering"
+          | "projectGrouping"
+          | "projectLayout"
+          | "projectViewOrdering"
+          | "projectSubGrouping"
+          | "releasePipelinesViewOrdering"
+          | "reviewGrouping"
+          | "reviewViewOrdering"
+          | "searchResultType"
+          | "searchViewOrdering"
+          | "teamViewOrdering"
+          | "triageViewOrdering"
+          | "workspaceMembersViewOrdering"
+          | "projectZoomLevel"
+          | "timelineZoomScale"
+          | "showCompletedAgentSessions"
+          | "showCompletedIssues"
+          | "showCompletedProjects"
+          | "showCompletedReviews"
+          | "closedIssuesOrderedByRecency"
+          | "showArchivedItems"
+          | "customerPageNeedsShowCompletedIssuesAndProjects"
+          | "projectCustomerNeedsShowCompletedIssuesLast"
+          | "showDraftReviews"
+          | "showEmptyGroupsBoard"
+          | "showEmptyGroupsList"
+          | "showEmptyGroups"
+          | "showEmptySubGroupsBoard"
+          | "showEmptySubGroupsList"
+          | "showEmptySubGroups"
+          | "customerPageNeedsShowImportantFirst"
+          | "embeddedCustomerNeedsShowImportantFirst"
+          | "projectCustomerNeedsShowImportantFirst"
+          | "showParents"
+          | "fieldPreviewLinks"
+          | "showReadItems"
+          | "showSnoozedItems"
+          | "showSubInitiativeProjects"
+          | "showNestedInitiatives"
+          | "showSubIssues"
+          | "showSubTeamIssues"
+          | "showSubTeamProjects"
+          | "showSupervisedIssues"
+          | "fieldSla"
+          | "fieldSentryIssues"
+          | "customViewFieldDateCreated"
+          | "customViewFieldOwner"
+          | "customViewFieldDateUpdated"
+          | "customViewFieldVisibility"
+          | "customerFieldDomains"
+          | "customerFieldOwner"
+          | "customerFieldRequestCount"
+          | "fieldCustomerCount"
+          | "customerFieldRevenue"
+          | "fieldCustomerRevenue"
+          | "customerFieldSize"
+          | "customerFieldSource"
+          | "customerFieldStatus"
+          | "customerFieldTier"
+          | "fieldCycle"
+          | "dashboardFieldDateCreated"
+          | "dashboardFieldOwner"
+          | "dashboardFieldDateUpdated"
+          | "fieldDueDate"
+          | "initiativeFieldHealth"
+          | "initiativeFieldActivity"
+          | "initiativeFieldDescription"
+          | "initiativeFieldInitiativeHealth"
+          | "initiativeFieldOwner"
+          | "initiativeFieldProjects"
+          | "initiativeFieldTargetDate"
+          | "initiativeFieldTeams"
+          | "fieldDateArchived"
+          | "fieldAssignee"
+          | "fieldDateCreated"
+          | "customerPageNeedsFieldIssueTargetDueDate"
+          | "fieldEstimate"
+          | "customerPageNeedsFieldIssueIdentifier"
+          | "fieldId"
+          | "fieldDateMyActivity"
+          | "customerPageNeedsFieldIssuePriority"
+          | "fieldPriority"
+          | "customerPageNeedsFieldIssueStatus"
+          | "fieldStatus"
+          | "fieldDateUpdated"
+          | "fieldLabels"
+          | "fieldLinkCount"
+          | "memberFieldJoined"
+          | "memberFieldStatus"
+          | "memberFieldTeams"
+          | "fieldMilestone"
+          | "projectFieldActivity"
+          | "projectFieldDateCompleted"
+          | "projectFieldDateCreated"
+          | "projectFieldCustomerCount"
+          | "projectFieldCustomerRevenue"
+          | "projectFieldDescriptionBoard"
+          | "projectFieldDescription"
+          | "fieldProject"
+          | "projectFieldHealthTimeline"
+          | "projectFieldHealth"
+          | "projectFieldInitiatives"
+          | "projectFieldLabels"
+          | "projectFieldLeadTimeline"
+          | "projectFieldLead"
+          | "projectFieldMembersBoard"
+          | "projectFieldMembersList"
+          | "projectFieldMembersTimeline"
+          | "projectFieldMembers"
+          | "projectFieldMilestoneTimeline"
+          | "projectFieldMilestone"
+          | "projectFieldPredictionsTimeline"
+          | "projectFieldPredictions"
+          | "projectFieldPriority"
+          | "projectFieldRelationsTimeline"
+          | "projectFieldRelations"
+          | "projectFieldRoadmapsBoard"
+          | "projectFieldRoadmapsList"
+          | "projectFieldRoadmapsTimeline"
+          | "projectFieldRoadmaps"
+          | "projectFieldRolloutStage"
+          | "projectFieldStartDate"
+          | "projectFieldStatusTimeline"
+          | "projectFieldStatus"
+          | "projectFieldTargetDate"
+          | "projectFieldTeamsBoard"
+          | "projectFieldTeamsList"
+          | "projectFieldTeamsTimeline"
+          | "projectFieldTeams"
+          | "projectFieldDateUpdated"
+          | "fieldPullRequests"
+          | "fieldRelease"
+          | "reviewFieldAvatar"
+          | "reviewFieldChecks"
+          | "reviewFieldIdentifier"
+          | "reviewFieldPreviewLinks"
+          | "reviewFieldRepository"
+          | "teamFieldDateCreated"
+          | "teamFieldCycle"
+          | "teamFieldIdentifier"
+          | "teamFieldMembers"
+          | "teamFieldMembership"
+          | "teamFieldOwner"
+          | "teamFieldProjects"
+          | "teamFieldDateUpdated"
+          | "fieldTimeInCurrentStatus"
+          | "showTriageIssues"
+          | "showUnreadItemsFirst"
+          | "timelineChronologyShowWeekNumbers"
+        > & {
+            projectLabelGroupColumns?: Maybe<
+              Array<
+                { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                  ViewPreferencesProjectLabelGroupColumn,
+                  "id" | "active"
+                >
+              >
+            >;
+          };
       }
     >;
   };
@@ -36407,8 +40366,198 @@ export type CustomView_ViewPreferencesValuesQuery = { __typename?: "Query" } & {
     viewPreferencesValues?: Maybe<
       { __typename: "ViewPreferencesValues" } & Pick<
         ViewPreferencesValues,
-        "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-      >
+        | "issueNesting"
+        | "projectShowEmptyGroupsBoard"
+        | "projectShowEmptyGroupsList"
+        | "projectShowEmptyGroupsTimeline"
+        | "projectShowEmptyGroups"
+        | "projectShowEmptySubGroupsBoard"
+        | "projectShowEmptySubGroupsList"
+        | "projectShowEmptySubGroupsTimeline"
+        | "projectShowEmptySubGroups"
+        | "hiddenColumns"
+        | "hiddenRows"
+        | "timelineChronologyShowCycleTeamIds"
+        | "customViewsOrdering"
+        | "customerPageNeedsViewGrouping"
+        | "customerPageNeedsViewOrdering"
+        | "customersViewOrdering"
+        | "dashboardsOrdering"
+        | "projectGroupingDateResolution"
+        | "viewOrderingDirection"
+        | "embeddedCustomerNeedsViewOrdering"
+        | "inboxViewOrdering"
+        | "initiativeGrouping"
+        | "initiativesViewOrdering"
+        | "issueGrouping"
+        | "layout"
+        | "viewOrdering"
+        | "issueSubGrouping"
+        | "issueGroupingLabelGroupId"
+        | "issueSubGroupingLabelGroupId"
+        | "projectGroupingLabelGroupId"
+        | "projectSubGroupingLabelGroupId"
+        | "projectGroupOrdering"
+        | "projectCustomerNeedsViewGrouping"
+        | "projectCustomerNeedsViewOrdering"
+        | "projectGrouping"
+        | "projectLayout"
+        | "projectViewOrdering"
+        | "projectSubGrouping"
+        | "releasePipelinesViewOrdering"
+        | "reviewGrouping"
+        | "reviewViewOrdering"
+        | "searchResultType"
+        | "searchViewOrdering"
+        | "teamViewOrdering"
+        | "triageViewOrdering"
+        | "workspaceMembersViewOrdering"
+        | "projectZoomLevel"
+        | "timelineZoomScale"
+        | "showCompletedAgentSessions"
+        | "showCompletedIssues"
+        | "showCompletedProjects"
+        | "showCompletedReviews"
+        | "closedIssuesOrderedByRecency"
+        | "showArchivedItems"
+        | "customerPageNeedsShowCompletedIssuesAndProjects"
+        | "projectCustomerNeedsShowCompletedIssuesLast"
+        | "showDraftReviews"
+        | "showEmptyGroupsBoard"
+        | "showEmptyGroupsList"
+        | "showEmptyGroups"
+        | "showEmptySubGroupsBoard"
+        | "showEmptySubGroupsList"
+        | "showEmptySubGroups"
+        | "customerPageNeedsShowImportantFirst"
+        | "embeddedCustomerNeedsShowImportantFirst"
+        | "projectCustomerNeedsShowImportantFirst"
+        | "showParents"
+        | "fieldPreviewLinks"
+        | "showReadItems"
+        | "showSnoozedItems"
+        | "showSubInitiativeProjects"
+        | "showNestedInitiatives"
+        | "showSubIssues"
+        | "showSubTeamIssues"
+        | "showSubTeamProjects"
+        | "showSupervisedIssues"
+        | "fieldSla"
+        | "fieldSentryIssues"
+        | "customViewFieldDateCreated"
+        | "customViewFieldOwner"
+        | "customViewFieldDateUpdated"
+        | "customViewFieldVisibility"
+        | "customerFieldDomains"
+        | "customerFieldOwner"
+        | "customerFieldRequestCount"
+        | "fieldCustomerCount"
+        | "customerFieldRevenue"
+        | "fieldCustomerRevenue"
+        | "customerFieldSize"
+        | "customerFieldSource"
+        | "customerFieldStatus"
+        | "customerFieldTier"
+        | "fieldCycle"
+        | "dashboardFieldDateCreated"
+        | "dashboardFieldOwner"
+        | "dashboardFieldDateUpdated"
+        | "fieldDueDate"
+        | "initiativeFieldHealth"
+        | "initiativeFieldActivity"
+        | "initiativeFieldDescription"
+        | "initiativeFieldInitiativeHealth"
+        | "initiativeFieldOwner"
+        | "initiativeFieldProjects"
+        | "initiativeFieldTargetDate"
+        | "initiativeFieldTeams"
+        | "fieldDateArchived"
+        | "fieldAssignee"
+        | "fieldDateCreated"
+        | "customerPageNeedsFieldIssueTargetDueDate"
+        | "fieldEstimate"
+        | "customerPageNeedsFieldIssueIdentifier"
+        | "fieldId"
+        | "fieldDateMyActivity"
+        | "customerPageNeedsFieldIssuePriority"
+        | "fieldPriority"
+        | "customerPageNeedsFieldIssueStatus"
+        | "fieldStatus"
+        | "fieldDateUpdated"
+        | "fieldLabels"
+        | "fieldLinkCount"
+        | "memberFieldJoined"
+        | "memberFieldStatus"
+        | "memberFieldTeams"
+        | "fieldMilestone"
+        | "projectFieldActivity"
+        | "projectFieldDateCompleted"
+        | "projectFieldDateCreated"
+        | "projectFieldCustomerCount"
+        | "projectFieldCustomerRevenue"
+        | "projectFieldDescriptionBoard"
+        | "projectFieldDescription"
+        | "fieldProject"
+        | "projectFieldHealthTimeline"
+        | "projectFieldHealth"
+        | "projectFieldInitiatives"
+        | "projectFieldLabels"
+        | "projectFieldLeadTimeline"
+        | "projectFieldLead"
+        | "projectFieldMembersBoard"
+        | "projectFieldMembersList"
+        | "projectFieldMembersTimeline"
+        | "projectFieldMembers"
+        | "projectFieldMilestoneTimeline"
+        | "projectFieldMilestone"
+        | "projectFieldPredictionsTimeline"
+        | "projectFieldPredictions"
+        | "projectFieldPriority"
+        | "projectFieldRelationsTimeline"
+        | "projectFieldRelations"
+        | "projectFieldRoadmapsBoard"
+        | "projectFieldRoadmapsList"
+        | "projectFieldRoadmapsTimeline"
+        | "projectFieldRoadmaps"
+        | "projectFieldRolloutStage"
+        | "projectFieldStartDate"
+        | "projectFieldStatusTimeline"
+        | "projectFieldStatus"
+        | "projectFieldTargetDate"
+        | "projectFieldTeamsBoard"
+        | "projectFieldTeamsList"
+        | "projectFieldTeamsTimeline"
+        | "projectFieldTeams"
+        | "projectFieldDateUpdated"
+        | "fieldPullRequests"
+        | "fieldRelease"
+        | "reviewFieldAvatar"
+        | "reviewFieldChecks"
+        | "reviewFieldIdentifier"
+        | "reviewFieldPreviewLinks"
+        | "reviewFieldRepository"
+        | "teamFieldDateCreated"
+        | "teamFieldCycle"
+        | "teamFieldIdentifier"
+        | "teamFieldMembers"
+        | "teamFieldMembership"
+        | "teamFieldOwner"
+        | "teamFieldProjects"
+        | "teamFieldDateUpdated"
+        | "fieldTimeInCurrentStatus"
+        | "showTriageIssues"
+        | "showUnreadItemsFirst"
+        | "timelineChronologyShowWeekNumbers"
+      > & {
+          projectLabelGroupColumns?: Maybe<
+            Array<
+              { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                ViewPreferencesProjectLabelGroupColumn,
+                "id" | "active"
+              >
+            >
+          >;
+        }
     >;
   };
 };
@@ -36460,8 +40609,198 @@ export type CustomViewsQuery = { __typename?: "Query" } & {
           viewPreferencesValues?: Maybe<
             { __typename: "ViewPreferencesValues" } & Pick<
               ViewPreferencesValues,
-              "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-            >
+              | "issueNesting"
+              | "projectShowEmptyGroupsBoard"
+              | "projectShowEmptyGroupsList"
+              | "projectShowEmptyGroupsTimeline"
+              | "projectShowEmptyGroups"
+              | "projectShowEmptySubGroupsBoard"
+              | "projectShowEmptySubGroupsList"
+              | "projectShowEmptySubGroupsTimeline"
+              | "projectShowEmptySubGroups"
+              | "hiddenColumns"
+              | "hiddenRows"
+              | "timelineChronologyShowCycleTeamIds"
+              | "customViewsOrdering"
+              | "customerPageNeedsViewGrouping"
+              | "customerPageNeedsViewOrdering"
+              | "customersViewOrdering"
+              | "dashboardsOrdering"
+              | "projectGroupingDateResolution"
+              | "viewOrderingDirection"
+              | "embeddedCustomerNeedsViewOrdering"
+              | "inboxViewOrdering"
+              | "initiativeGrouping"
+              | "initiativesViewOrdering"
+              | "issueGrouping"
+              | "layout"
+              | "viewOrdering"
+              | "issueSubGrouping"
+              | "issueGroupingLabelGroupId"
+              | "issueSubGroupingLabelGroupId"
+              | "projectGroupingLabelGroupId"
+              | "projectSubGroupingLabelGroupId"
+              | "projectGroupOrdering"
+              | "projectCustomerNeedsViewGrouping"
+              | "projectCustomerNeedsViewOrdering"
+              | "projectGrouping"
+              | "projectLayout"
+              | "projectViewOrdering"
+              | "projectSubGrouping"
+              | "releasePipelinesViewOrdering"
+              | "reviewGrouping"
+              | "reviewViewOrdering"
+              | "searchResultType"
+              | "searchViewOrdering"
+              | "teamViewOrdering"
+              | "triageViewOrdering"
+              | "workspaceMembersViewOrdering"
+              | "projectZoomLevel"
+              | "timelineZoomScale"
+              | "showCompletedAgentSessions"
+              | "showCompletedIssues"
+              | "showCompletedProjects"
+              | "showCompletedReviews"
+              | "closedIssuesOrderedByRecency"
+              | "showArchivedItems"
+              | "customerPageNeedsShowCompletedIssuesAndProjects"
+              | "projectCustomerNeedsShowCompletedIssuesLast"
+              | "showDraftReviews"
+              | "showEmptyGroupsBoard"
+              | "showEmptyGroupsList"
+              | "showEmptyGroups"
+              | "showEmptySubGroupsBoard"
+              | "showEmptySubGroupsList"
+              | "showEmptySubGroups"
+              | "customerPageNeedsShowImportantFirst"
+              | "embeddedCustomerNeedsShowImportantFirst"
+              | "projectCustomerNeedsShowImportantFirst"
+              | "showParents"
+              | "fieldPreviewLinks"
+              | "showReadItems"
+              | "showSnoozedItems"
+              | "showSubInitiativeProjects"
+              | "showNestedInitiatives"
+              | "showSubIssues"
+              | "showSubTeamIssues"
+              | "showSubTeamProjects"
+              | "showSupervisedIssues"
+              | "fieldSla"
+              | "fieldSentryIssues"
+              | "customViewFieldDateCreated"
+              | "customViewFieldOwner"
+              | "customViewFieldDateUpdated"
+              | "customViewFieldVisibility"
+              | "customerFieldDomains"
+              | "customerFieldOwner"
+              | "customerFieldRequestCount"
+              | "fieldCustomerCount"
+              | "customerFieldRevenue"
+              | "fieldCustomerRevenue"
+              | "customerFieldSize"
+              | "customerFieldSource"
+              | "customerFieldStatus"
+              | "customerFieldTier"
+              | "fieldCycle"
+              | "dashboardFieldDateCreated"
+              | "dashboardFieldOwner"
+              | "dashboardFieldDateUpdated"
+              | "fieldDueDate"
+              | "initiativeFieldHealth"
+              | "initiativeFieldActivity"
+              | "initiativeFieldDescription"
+              | "initiativeFieldInitiativeHealth"
+              | "initiativeFieldOwner"
+              | "initiativeFieldProjects"
+              | "initiativeFieldTargetDate"
+              | "initiativeFieldTeams"
+              | "fieldDateArchived"
+              | "fieldAssignee"
+              | "fieldDateCreated"
+              | "customerPageNeedsFieldIssueTargetDueDate"
+              | "fieldEstimate"
+              | "customerPageNeedsFieldIssueIdentifier"
+              | "fieldId"
+              | "fieldDateMyActivity"
+              | "customerPageNeedsFieldIssuePriority"
+              | "fieldPriority"
+              | "customerPageNeedsFieldIssueStatus"
+              | "fieldStatus"
+              | "fieldDateUpdated"
+              | "fieldLabels"
+              | "fieldLinkCount"
+              | "memberFieldJoined"
+              | "memberFieldStatus"
+              | "memberFieldTeams"
+              | "fieldMilestone"
+              | "projectFieldActivity"
+              | "projectFieldDateCompleted"
+              | "projectFieldDateCreated"
+              | "projectFieldCustomerCount"
+              | "projectFieldCustomerRevenue"
+              | "projectFieldDescriptionBoard"
+              | "projectFieldDescription"
+              | "fieldProject"
+              | "projectFieldHealthTimeline"
+              | "projectFieldHealth"
+              | "projectFieldInitiatives"
+              | "projectFieldLabels"
+              | "projectFieldLeadTimeline"
+              | "projectFieldLead"
+              | "projectFieldMembersBoard"
+              | "projectFieldMembersList"
+              | "projectFieldMembersTimeline"
+              | "projectFieldMembers"
+              | "projectFieldMilestoneTimeline"
+              | "projectFieldMilestone"
+              | "projectFieldPredictionsTimeline"
+              | "projectFieldPredictions"
+              | "projectFieldPriority"
+              | "projectFieldRelationsTimeline"
+              | "projectFieldRelations"
+              | "projectFieldRoadmapsBoard"
+              | "projectFieldRoadmapsList"
+              | "projectFieldRoadmapsTimeline"
+              | "projectFieldRoadmaps"
+              | "projectFieldRolloutStage"
+              | "projectFieldStartDate"
+              | "projectFieldStatusTimeline"
+              | "projectFieldStatus"
+              | "projectFieldTargetDate"
+              | "projectFieldTeamsBoard"
+              | "projectFieldTeamsList"
+              | "projectFieldTeamsTimeline"
+              | "projectFieldTeams"
+              | "projectFieldDateUpdated"
+              | "fieldPullRequests"
+              | "fieldRelease"
+              | "reviewFieldAvatar"
+              | "reviewFieldChecks"
+              | "reviewFieldIdentifier"
+              | "reviewFieldPreviewLinks"
+              | "reviewFieldRepository"
+              | "teamFieldDateCreated"
+              | "teamFieldCycle"
+              | "teamFieldIdentifier"
+              | "teamFieldMembers"
+              | "teamFieldMembership"
+              | "teamFieldOwner"
+              | "teamFieldProjects"
+              | "teamFieldDateUpdated"
+              | "fieldTimeInCurrentStatus"
+              | "showTriageIssues"
+              | "showUnreadItemsFirst"
+              | "timelineChronologyShowWeekNumbers"
+            > & {
+                projectLabelGroupColumns?: Maybe<
+                  Array<
+                    { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                      ViewPreferencesProjectLabelGroupColumn,
+                      "id" | "active"
+                    >
+                  >
+                >;
+              }
           >;
           userViewPreferences?: Maybe<
             { __typename: "ViewPreferences" } & Pick<
@@ -36470,8 +40809,198 @@ export type CustomViewsQuery = { __typename?: "Query" } & {
             > & {
                 preferences: { __typename: "ViewPreferencesValues" } & Pick<
                   ViewPreferencesValues,
-                  "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-                >;
+                  | "issueNesting"
+                  | "projectShowEmptyGroupsBoard"
+                  | "projectShowEmptyGroupsList"
+                  | "projectShowEmptyGroupsTimeline"
+                  | "projectShowEmptyGroups"
+                  | "projectShowEmptySubGroupsBoard"
+                  | "projectShowEmptySubGroupsList"
+                  | "projectShowEmptySubGroupsTimeline"
+                  | "projectShowEmptySubGroups"
+                  | "hiddenColumns"
+                  | "hiddenRows"
+                  | "timelineChronologyShowCycleTeamIds"
+                  | "customViewsOrdering"
+                  | "customerPageNeedsViewGrouping"
+                  | "customerPageNeedsViewOrdering"
+                  | "customersViewOrdering"
+                  | "dashboardsOrdering"
+                  | "projectGroupingDateResolution"
+                  | "viewOrderingDirection"
+                  | "embeddedCustomerNeedsViewOrdering"
+                  | "inboxViewOrdering"
+                  | "initiativeGrouping"
+                  | "initiativesViewOrdering"
+                  | "issueGrouping"
+                  | "layout"
+                  | "viewOrdering"
+                  | "issueSubGrouping"
+                  | "issueGroupingLabelGroupId"
+                  | "issueSubGroupingLabelGroupId"
+                  | "projectGroupingLabelGroupId"
+                  | "projectSubGroupingLabelGroupId"
+                  | "projectGroupOrdering"
+                  | "projectCustomerNeedsViewGrouping"
+                  | "projectCustomerNeedsViewOrdering"
+                  | "projectGrouping"
+                  | "projectLayout"
+                  | "projectViewOrdering"
+                  | "projectSubGrouping"
+                  | "releasePipelinesViewOrdering"
+                  | "reviewGrouping"
+                  | "reviewViewOrdering"
+                  | "searchResultType"
+                  | "searchViewOrdering"
+                  | "teamViewOrdering"
+                  | "triageViewOrdering"
+                  | "workspaceMembersViewOrdering"
+                  | "projectZoomLevel"
+                  | "timelineZoomScale"
+                  | "showCompletedAgentSessions"
+                  | "showCompletedIssues"
+                  | "showCompletedProjects"
+                  | "showCompletedReviews"
+                  | "closedIssuesOrderedByRecency"
+                  | "showArchivedItems"
+                  | "customerPageNeedsShowCompletedIssuesAndProjects"
+                  | "projectCustomerNeedsShowCompletedIssuesLast"
+                  | "showDraftReviews"
+                  | "showEmptyGroupsBoard"
+                  | "showEmptyGroupsList"
+                  | "showEmptyGroups"
+                  | "showEmptySubGroupsBoard"
+                  | "showEmptySubGroupsList"
+                  | "showEmptySubGroups"
+                  | "customerPageNeedsShowImportantFirst"
+                  | "embeddedCustomerNeedsShowImportantFirst"
+                  | "projectCustomerNeedsShowImportantFirst"
+                  | "showParents"
+                  | "fieldPreviewLinks"
+                  | "showReadItems"
+                  | "showSnoozedItems"
+                  | "showSubInitiativeProjects"
+                  | "showNestedInitiatives"
+                  | "showSubIssues"
+                  | "showSubTeamIssues"
+                  | "showSubTeamProjects"
+                  | "showSupervisedIssues"
+                  | "fieldSla"
+                  | "fieldSentryIssues"
+                  | "customViewFieldDateCreated"
+                  | "customViewFieldOwner"
+                  | "customViewFieldDateUpdated"
+                  | "customViewFieldVisibility"
+                  | "customerFieldDomains"
+                  | "customerFieldOwner"
+                  | "customerFieldRequestCount"
+                  | "fieldCustomerCount"
+                  | "customerFieldRevenue"
+                  | "fieldCustomerRevenue"
+                  | "customerFieldSize"
+                  | "customerFieldSource"
+                  | "customerFieldStatus"
+                  | "customerFieldTier"
+                  | "fieldCycle"
+                  | "dashboardFieldDateCreated"
+                  | "dashboardFieldOwner"
+                  | "dashboardFieldDateUpdated"
+                  | "fieldDueDate"
+                  | "initiativeFieldHealth"
+                  | "initiativeFieldActivity"
+                  | "initiativeFieldDescription"
+                  | "initiativeFieldInitiativeHealth"
+                  | "initiativeFieldOwner"
+                  | "initiativeFieldProjects"
+                  | "initiativeFieldTargetDate"
+                  | "initiativeFieldTeams"
+                  | "fieldDateArchived"
+                  | "fieldAssignee"
+                  | "fieldDateCreated"
+                  | "customerPageNeedsFieldIssueTargetDueDate"
+                  | "fieldEstimate"
+                  | "customerPageNeedsFieldIssueIdentifier"
+                  | "fieldId"
+                  | "fieldDateMyActivity"
+                  | "customerPageNeedsFieldIssuePriority"
+                  | "fieldPriority"
+                  | "customerPageNeedsFieldIssueStatus"
+                  | "fieldStatus"
+                  | "fieldDateUpdated"
+                  | "fieldLabels"
+                  | "fieldLinkCount"
+                  | "memberFieldJoined"
+                  | "memberFieldStatus"
+                  | "memberFieldTeams"
+                  | "fieldMilestone"
+                  | "projectFieldActivity"
+                  | "projectFieldDateCompleted"
+                  | "projectFieldDateCreated"
+                  | "projectFieldCustomerCount"
+                  | "projectFieldCustomerRevenue"
+                  | "projectFieldDescriptionBoard"
+                  | "projectFieldDescription"
+                  | "fieldProject"
+                  | "projectFieldHealthTimeline"
+                  | "projectFieldHealth"
+                  | "projectFieldInitiatives"
+                  | "projectFieldLabels"
+                  | "projectFieldLeadTimeline"
+                  | "projectFieldLead"
+                  | "projectFieldMembersBoard"
+                  | "projectFieldMembersList"
+                  | "projectFieldMembersTimeline"
+                  | "projectFieldMembers"
+                  | "projectFieldMilestoneTimeline"
+                  | "projectFieldMilestone"
+                  | "projectFieldPredictionsTimeline"
+                  | "projectFieldPredictions"
+                  | "projectFieldPriority"
+                  | "projectFieldRelationsTimeline"
+                  | "projectFieldRelations"
+                  | "projectFieldRoadmapsBoard"
+                  | "projectFieldRoadmapsList"
+                  | "projectFieldRoadmapsTimeline"
+                  | "projectFieldRoadmaps"
+                  | "projectFieldRolloutStage"
+                  | "projectFieldStartDate"
+                  | "projectFieldStatusTimeline"
+                  | "projectFieldStatus"
+                  | "projectFieldTargetDate"
+                  | "projectFieldTeamsBoard"
+                  | "projectFieldTeamsList"
+                  | "projectFieldTeamsTimeline"
+                  | "projectFieldTeams"
+                  | "projectFieldDateUpdated"
+                  | "fieldPullRequests"
+                  | "fieldRelease"
+                  | "reviewFieldAvatar"
+                  | "reviewFieldChecks"
+                  | "reviewFieldIdentifier"
+                  | "reviewFieldPreviewLinks"
+                  | "reviewFieldRepository"
+                  | "teamFieldDateCreated"
+                  | "teamFieldCycle"
+                  | "teamFieldIdentifier"
+                  | "teamFieldMembers"
+                  | "teamFieldMembership"
+                  | "teamFieldOwner"
+                  | "teamFieldProjects"
+                  | "teamFieldDateUpdated"
+                  | "fieldTimeInCurrentStatus"
+                  | "showTriageIssues"
+                  | "showUnreadItemsFirst"
+                  | "timelineChronologyShowWeekNumbers"
+                > & {
+                    projectLabelGroupColumns?: Maybe<
+                      Array<
+                        { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                          ViewPreferencesProjectLabelGroupColumn,
+                          "id" | "active"
+                        >
+                      >
+                    >;
+                  };
               }
           >;
           organizationViewPreferences?: Maybe<
@@ -36481,8 +41010,198 @@ export type CustomViewsQuery = { __typename?: "Query" } & {
             > & {
                 preferences: { __typename: "ViewPreferencesValues" } & Pick<
                   ViewPreferencesValues,
-                  "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-                >;
+                  | "issueNesting"
+                  | "projectShowEmptyGroupsBoard"
+                  | "projectShowEmptyGroupsList"
+                  | "projectShowEmptyGroupsTimeline"
+                  | "projectShowEmptyGroups"
+                  | "projectShowEmptySubGroupsBoard"
+                  | "projectShowEmptySubGroupsList"
+                  | "projectShowEmptySubGroupsTimeline"
+                  | "projectShowEmptySubGroups"
+                  | "hiddenColumns"
+                  | "hiddenRows"
+                  | "timelineChronologyShowCycleTeamIds"
+                  | "customViewsOrdering"
+                  | "customerPageNeedsViewGrouping"
+                  | "customerPageNeedsViewOrdering"
+                  | "customersViewOrdering"
+                  | "dashboardsOrdering"
+                  | "projectGroupingDateResolution"
+                  | "viewOrderingDirection"
+                  | "embeddedCustomerNeedsViewOrdering"
+                  | "inboxViewOrdering"
+                  | "initiativeGrouping"
+                  | "initiativesViewOrdering"
+                  | "issueGrouping"
+                  | "layout"
+                  | "viewOrdering"
+                  | "issueSubGrouping"
+                  | "issueGroupingLabelGroupId"
+                  | "issueSubGroupingLabelGroupId"
+                  | "projectGroupingLabelGroupId"
+                  | "projectSubGroupingLabelGroupId"
+                  | "projectGroupOrdering"
+                  | "projectCustomerNeedsViewGrouping"
+                  | "projectCustomerNeedsViewOrdering"
+                  | "projectGrouping"
+                  | "projectLayout"
+                  | "projectViewOrdering"
+                  | "projectSubGrouping"
+                  | "releasePipelinesViewOrdering"
+                  | "reviewGrouping"
+                  | "reviewViewOrdering"
+                  | "searchResultType"
+                  | "searchViewOrdering"
+                  | "teamViewOrdering"
+                  | "triageViewOrdering"
+                  | "workspaceMembersViewOrdering"
+                  | "projectZoomLevel"
+                  | "timelineZoomScale"
+                  | "showCompletedAgentSessions"
+                  | "showCompletedIssues"
+                  | "showCompletedProjects"
+                  | "showCompletedReviews"
+                  | "closedIssuesOrderedByRecency"
+                  | "showArchivedItems"
+                  | "customerPageNeedsShowCompletedIssuesAndProjects"
+                  | "projectCustomerNeedsShowCompletedIssuesLast"
+                  | "showDraftReviews"
+                  | "showEmptyGroupsBoard"
+                  | "showEmptyGroupsList"
+                  | "showEmptyGroups"
+                  | "showEmptySubGroupsBoard"
+                  | "showEmptySubGroupsList"
+                  | "showEmptySubGroups"
+                  | "customerPageNeedsShowImportantFirst"
+                  | "embeddedCustomerNeedsShowImportantFirst"
+                  | "projectCustomerNeedsShowImportantFirst"
+                  | "showParents"
+                  | "fieldPreviewLinks"
+                  | "showReadItems"
+                  | "showSnoozedItems"
+                  | "showSubInitiativeProjects"
+                  | "showNestedInitiatives"
+                  | "showSubIssues"
+                  | "showSubTeamIssues"
+                  | "showSubTeamProjects"
+                  | "showSupervisedIssues"
+                  | "fieldSla"
+                  | "fieldSentryIssues"
+                  | "customViewFieldDateCreated"
+                  | "customViewFieldOwner"
+                  | "customViewFieldDateUpdated"
+                  | "customViewFieldVisibility"
+                  | "customerFieldDomains"
+                  | "customerFieldOwner"
+                  | "customerFieldRequestCount"
+                  | "fieldCustomerCount"
+                  | "customerFieldRevenue"
+                  | "fieldCustomerRevenue"
+                  | "customerFieldSize"
+                  | "customerFieldSource"
+                  | "customerFieldStatus"
+                  | "customerFieldTier"
+                  | "fieldCycle"
+                  | "dashboardFieldDateCreated"
+                  | "dashboardFieldOwner"
+                  | "dashboardFieldDateUpdated"
+                  | "fieldDueDate"
+                  | "initiativeFieldHealth"
+                  | "initiativeFieldActivity"
+                  | "initiativeFieldDescription"
+                  | "initiativeFieldInitiativeHealth"
+                  | "initiativeFieldOwner"
+                  | "initiativeFieldProjects"
+                  | "initiativeFieldTargetDate"
+                  | "initiativeFieldTeams"
+                  | "fieldDateArchived"
+                  | "fieldAssignee"
+                  | "fieldDateCreated"
+                  | "customerPageNeedsFieldIssueTargetDueDate"
+                  | "fieldEstimate"
+                  | "customerPageNeedsFieldIssueIdentifier"
+                  | "fieldId"
+                  | "fieldDateMyActivity"
+                  | "customerPageNeedsFieldIssuePriority"
+                  | "fieldPriority"
+                  | "customerPageNeedsFieldIssueStatus"
+                  | "fieldStatus"
+                  | "fieldDateUpdated"
+                  | "fieldLabels"
+                  | "fieldLinkCount"
+                  | "memberFieldJoined"
+                  | "memberFieldStatus"
+                  | "memberFieldTeams"
+                  | "fieldMilestone"
+                  | "projectFieldActivity"
+                  | "projectFieldDateCompleted"
+                  | "projectFieldDateCreated"
+                  | "projectFieldCustomerCount"
+                  | "projectFieldCustomerRevenue"
+                  | "projectFieldDescriptionBoard"
+                  | "projectFieldDescription"
+                  | "fieldProject"
+                  | "projectFieldHealthTimeline"
+                  | "projectFieldHealth"
+                  | "projectFieldInitiatives"
+                  | "projectFieldLabels"
+                  | "projectFieldLeadTimeline"
+                  | "projectFieldLead"
+                  | "projectFieldMembersBoard"
+                  | "projectFieldMembersList"
+                  | "projectFieldMembersTimeline"
+                  | "projectFieldMembers"
+                  | "projectFieldMilestoneTimeline"
+                  | "projectFieldMilestone"
+                  | "projectFieldPredictionsTimeline"
+                  | "projectFieldPredictions"
+                  | "projectFieldPriority"
+                  | "projectFieldRelationsTimeline"
+                  | "projectFieldRelations"
+                  | "projectFieldRoadmapsBoard"
+                  | "projectFieldRoadmapsList"
+                  | "projectFieldRoadmapsTimeline"
+                  | "projectFieldRoadmaps"
+                  | "projectFieldRolloutStage"
+                  | "projectFieldStartDate"
+                  | "projectFieldStatusTimeline"
+                  | "projectFieldStatus"
+                  | "projectFieldTargetDate"
+                  | "projectFieldTeamsBoard"
+                  | "projectFieldTeamsList"
+                  | "projectFieldTeamsTimeline"
+                  | "projectFieldTeams"
+                  | "projectFieldDateUpdated"
+                  | "fieldPullRequests"
+                  | "fieldRelease"
+                  | "reviewFieldAvatar"
+                  | "reviewFieldChecks"
+                  | "reviewFieldIdentifier"
+                  | "reviewFieldPreviewLinks"
+                  | "reviewFieldRepository"
+                  | "teamFieldDateCreated"
+                  | "teamFieldCycle"
+                  | "teamFieldIdentifier"
+                  | "teamFieldMembers"
+                  | "teamFieldMembership"
+                  | "teamFieldOwner"
+                  | "teamFieldProjects"
+                  | "teamFieldDateUpdated"
+                  | "fieldTimeInCurrentStatus"
+                  | "showTriageIssues"
+                  | "showUnreadItemsFirst"
+                  | "timelineChronologyShowWeekNumbers"
+                > & {
+                    projectLabelGroupColumns?: Maybe<
+                      Array<
+                        { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                          ViewPreferencesProjectLabelGroupColumn,
+                          "id" | "active"
+                        >
+                      >
+                    >;
+                  };
               }
           >;
           team?: Maybe<{ __typename?: "Team" } & Pick<Team, "id">>;
@@ -36872,6 +41591,48 @@ export type Cycle_IssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -36993,6 +41754,48 @@ export type Cycle_UncompletedIssuesUponCloseQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -37987,6 +42790,26 @@ export type Initiative_ProjectsQuery = { __typename?: "Query" } & {
                   >;
                 }
             >;
+            syncedWith?: Maybe<
+              Array<
+                { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+                    metadata?: Maybe<
+                      | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                          ExternalEntityInfoGithubMetadata,
+                          "number" | "owner" | "repo"
+                        >)
+                      | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                          ExternalEntityInfoJiraMetadata,
+                          "issueTypeId" | "projectId" | "issueKey"
+                        >)
+                      | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                          ExternalEntitySlackMetadata,
+                          "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                        >)
+                    >;
+                  }
+              >
+            >;
             lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
             lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
             lead?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
@@ -38647,6 +43470,48 @@ export type IssueQuery = { __typename?: "Query" } & {
             user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
           }
       >;
+      sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+        IssueSharedAccess,
+        "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+      > & {
+          sharedWithUsers: Array<
+            { __typename: "User" } & Pick<
+              User,
+              | "statusUntilAt"
+              | "description"
+              | "avatarUrl"
+              | "createdIssueCount"
+              | "disableReason"
+              | "avatarBackgroundColor"
+              | "statusEmoji"
+              | "initials"
+              | "statusLabel"
+              | "updatedAt"
+              | "lastSeen"
+              | "timezone"
+              | "archivedAt"
+              | "createdAt"
+              | "id"
+              | "gitHubUserId"
+              | "displayName"
+              | "email"
+              | "name"
+              | "url"
+              | "active"
+              | "guest"
+              | "app"
+              | "admin"
+              | "owner"
+              | "isAssignable"
+              | "isMentionable"
+              | "isMe"
+              | "supportsAgentSessions"
+              | "canAccessAnyPublicTeam"
+              | "calendarHash"
+              | "inviteHash"
+            >
+          >;
+        };
       delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
       botActor?: Maybe<
         { __typename: "ActorBot" } & Pick<
@@ -38817,6 +43682,48 @@ export type Issue_ChildrenQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -39577,6 +44484,57 @@ export type Issue_RelationsQuery = { __typename?: "Query" } & {
   };
 };
 
+export type Issue_SharedAccessQueryVariables = Exact<{
+  id: Scalars["String"];
+}>;
+
+export type Issue_SharedAccessQuery = { __typename?: "Query" } & {
+  issue: { __typename?: "Issue" } & {
+    sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+      IssueSharedAccess,
+      "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+    > & {
+        sharedWithUsers: Array<
+          { __typename: "User" } & Pick<
+            User,
+            | "statusUntilAt"
+            | "description"
+            | "avatarUrl"
+            | "createdIssueCount"
+            | "disableReason"
+            | "avatarBackgroundColor"
+            | "statusEmoji"
+            | "initials"
+            | "statusLabel"
+            | "updatedAt"
+            | "lastSeen"
+            | "timezone"
+            | "archivedAt"
+            | "createdAt"
+            | "id"
+            | "gitHubUserId"
+            | "displayName"
+            | "email"
+            | "name"
+            | "url"
+            | "active"
+            | "guest"
+            | "app"
+            | "admin"
+            | "owner"
+            | "isAssignable"
+            | "isMentionable"
+            | "isMe"
+            | "supportsAgentSessions"
+            | "canAccessAnyPublicTeam"
+            | "calendarHash"
+            | "inviteHash"
+          >
+        >;
+      };
+  };
+};
+
 export type Issue_StateHistoryQueryVariables = Exact<{
   id: Scalars["String"];
   after?: InputMaybe<Scalars["String"]>;
@@ -39727,6 +44685,48 @@ export type IssueFigmaFileKeySearchQuery = { __typename?: "Query" } & {
                 user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
               }
           >;
+          sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+            IssueSharedAccess,
+            "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+          > & {
+              sharedWithUsers: Array<
+                { __typename: "User" } & Pick<
+                  User,
+                  | "statusUntilAt"
+                  | "description"
+                  | "avatarUrl"
+                  | "createdIssueCount"
+                  | "disableReason"
+                  | "avatarBackgroundColor"
+                  | "statusEmoji"
+                  | "initials"
+                  | "statusLabel"
+                  | "updatedAt"
+                  | "lastSeen"
+                  | "timezone"
+                  | "archivedAt"
+                  | "createdAt"
+                  | "id"
+                  | "gitHubUserId"
+                  | "displayName"
+                  | "email"
+                  | "name"
+                  | "url"
+                  | "active"
+                  | "guest"
+                  | "app"
+                  | "admin"
+                  | "owner"
+                  | "isAssignable"
+                  | "isMentionable"
+                  | "isMe"
+                  | "supportsAgentSessions"
+                  | "canAccessAnyPublicTeam"
+                  | "calendarHash"
+                  | "inviteHash"
+                >
+              >;
+            };
           delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
           botActor?: Maybe<
             { __typename: "ActorBot" } & Pick<
@@ -39953,6 +44953,48 @@ export type IssueLabel_IssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -40168,6 +45210,48 @@ export type IssueSearchQuery = { __typename?: "Query" } & {
                 user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
               }
           >;
+          sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+            IssueSharedAccess,
+            "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+          > & {
+              sharedWithUsers: Array<
+                { __typename: "User" } & Pick<
+                  User,
+                  | "statusUntilAt"
+                  | "description"
+                  | "avatarUrl"
+                  | "createdIssueCount"
+                  | "disableReason"
+                  | "avatarBackgroundColor"
+                  | "statusEmoji"
+                  | "initials"
+                  | "statusLabel"
+                  | "updatedAt"
+                  | "lastSeen"
+                  | "timezone"
+                  | "archivedAt"
+                  | "createdAt"
+                  | "id"
+                  | "gitHubUserId"
+                  | "displayName"
+                  | "email"
+                  | "name"
+                  | "url"
+                  | "active"
+                  | "guest"
+                  | "app"
+                  | "admin"
+                  | "owner"
+                  | "isAssignable"
+                  | "isMentionable"
+                  | "isMe"
+                  | "supportsAgentSessions"
+                  | "canAccessAnyPublicTeam"
+                  | "calendarHash"
+                  | "inviteHash"
+                >
+              >;
+            };
           delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
           botActor?: Maybe<
             { __typename: "ActorBot" } & Pick<
@@ -40290,6 +45374,48 @@ export type IssueVcsBranchSearchQuery = { __typename?: "Query" } & {
               user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             }
         >;
+        sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+          IssueSharedAccess,
+          "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+        > & {
+            sharedWithUsers: Array<
+              { __typename: "User" } & Pick<
+                User,
+                | "statusUntilAt"
+                | "description"
+                | "avatarUrl"
+                | "createdIssueCount"
+                | "disableReason"
+                | "avatarBackgroundColor"
+                | "statusEmoji"
+                | "initials"
+                | "statusLabel"
+                | "updatedAt"
+                | "lastSeen"
+                | "timezone"
+                | "archivedAt"
+                | "createdAt"
+                | "id"
+                | "gitHubUserId"
+                | "displayName"
+                | "email"
+                | "name"
+                | "url"
+                | "active"
+                | "guest"
+                | "app"
+                | "admin"
+                | "owner"
+                | "isAssignable"
+                | "isMentionable"
+                | "isMe"
+                | "supportsAgentSessions"
+                | "canAccessAnyPublicTeam"
+                | "calendarHash"
+                | "inviteHash"
+              >
+            >;
+          };
         delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
         botActor?: Maybe<
           { __typename: "ActorBot" } & Pick<
@@ -40472,6 +45598,48 @@ export type IssueVcsBranchSearch_ChildrenQuery = { __typename?: "Query" } & {
                     user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                   }
               >;
+              sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+                IssueSharedAccess,
+                "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+              > & {
+                  sharedWithUsers: Array<
+                    { __typename: "User" } & Pick<
+                      User,
+                      | "statusUntilAt"
+                      | "description"
+                      | "avatarUrl"
+                      | "createdIssueCount"
+                      | "disableReason"
+                      | "avatarBackgroundColor"
+                      | "statusEmoji"
+                      | "initials"
+                      | "statusLabel"
+                      | "updatedAt"
+                      | "lastSeen"
+                      | "timezone"
+                      | "archivedAt"
+                      | "createdAt"
+                      | "id"
+                      | "gitHubUserId"
+                      | "displayName"
+                      | "email"
+                      | "name"
+                      | "url"
+                      | "active"
+                      | "guest"
+                      | "app"
+                      | "admin"
+                      | "owner"
+                      | "isAssignable"
+                      | "isMentionable"
+                      | "isMe"
+                      | "supportsAgentSessions"
+                      | "canAccessAnyPublicTeam"
+                      | "calendarHash"
+                      | "inviteHash"
+                    >
+                  >;
+                };
               delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
               botActor?: Maybe<
                 { __typename: "ActorBot" } & Pick<
@@ -41257,6 +46425,59 @@ export type IssueVcsBranchSearch_RelationsQuery = { __typename?: "Query" } & {
   >;
 };
 
+export type IssueVcsBranchSearch_SharedAccessQueryVariables = Exact<{
+  branchName: Scalars["String"];
+}>;
+
+export type IssueVcsBranchSearch_SharedAccessQuery = { __typename?: "Query" } & {
+  issueVcsBranchSearch?: Maybe<
+    { __typename?: "Issue" } & {
+      sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+        IssueSharedAccess,
+        "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+      > & {
+          sharedWithUsers: Array<
+            { __typename: "User" } & Pick<
+              User,
+              | "statusUntilAt"
+              | "description"
+              | "avatarUrl"
+              | "createdIssueCount"
+              | "disableReason"
+              | "avatarBackgroundColor"
+              | "statusEmoji"
+              | "initials"
+              | "statusLabel"
+              | "updatedAt"
+              | "lastSeen"
+              | "timezone"
+              | "archivedAt"
+              | "createdAt"
+              | "id"
+              | "gitHubUserId"
+              | "displayName"
+              | "email"
+              | "name"
+              | "url"
+              | "active"
+              | "guest"
+              | "app"
+              | "admin"
+              | "owner"
+              | "isAssignable"
+              | "isMentionable"
+              | "isMe"
+              | "supportsAgentSessions"
+              | "canAccessAnyPublicTeam"
+              | "calendarHash"
+              | "inviteHash"
+            >
+          >;
+        };
+    }
+  >;
+};
+
 export type IssueVcsBranchSearch_StateHistoryQueryVariables = Exact<{
   branchName: Scalars["String"];
   after?: InputMaybe<Scalars["String"]>;
@@ -41412,6 +46633,48 @@ export type IssuesQuery = { __typename?: "Query" } & {
                 user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
               }
           >;
+          sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+            IssueSharedAccess,
+            "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+          > & {
+              sharedWithUsers: Array<
+                { __typename: "User" } & Pick<
+                  User,
+                  | "statusUntilAt"
+                  | "description"
+                  | "avatarUrl"
+                  | "createdIssueCount"
+                  | "disableReason"
+                  | "avatarBackgroundColor"
+                  | "statusEmoji"
+                  | "initials"
+                  | "statusLabel"
+                  | "updatedAt"
+                  | "lastSeen"
+                  | "timezone"
+                  | "archivedAt"
+                  | "createdAt"
+                  | "id"
+                  | "gitHubUserId"
+                  | "displayName"
+                  | "email"
+                  | "name"
+                  | "url"
+                  | "active"
+                  | "guest"
+                  | "app"
+                  | "admin"
+                  | "owner"
+                  | "isAssignable"
+                  | "isMentionable"
+                  | "isMe"
+                  | "supportsAgentSessions"
+                  | "canAccessAnyPublicTeam"
+                  | "calendarHash"
+                  | "inviteHash"
+                >
+              >;
+            };
           delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
           botActor?: Maybe<
             { __typename: "ActorBot" } & Pick<
@@ -43179,6 +48442,26 @@ export type ProjectQuery = { __typename?: "Query" } & {
             >;
           }
       >;
+      syncedWith?: Maybe<
+        Array<
+          { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+              metadata?: Maybe<
+                | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                    ExternalEntityInfoGithubMetadata,
+                    "number" | "owner" | "repo"
+                  >)
+                | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                    ExternalEntityInfoJiraMetadata,
+                    "issueTypeId" | "projectId" | "issueKey"
+                  >)
+                | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                    ExternalEntitySlackMetadata,
+                    "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                  >)
+              >;
+            }
+        >
+      >;
       lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
       lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
       lead?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
@@ -43738,6 +49021,48 @@ export type Project_IssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -44340,6 +49665,26 @@ export type ProjectLabel_ProjectsQuery = { __typename?: "Query" } & {
                   >;
                 }
             >;
+            syncedWith?: Maybe<
+              Array<
+                { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+                    metadata?: Maybe<
+                      | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                          ExternalEntityInfoGithubMetadata,
+                          "number" | "owner" | "repo"
+                        >)
+                      | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                          ExternalEntityInfoJiraMetadata,
+                          "issueTypeId" | "projectId" | "issueKey"
+                        >)
+                      | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                          ExternalEntitySlackMetadata,
+                          "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                        >)
+                    >;
+                  }
+              >
+            >;
             lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
             lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
             lead?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
@@ -44568,6 +49913,48 @@ export type ProjectMilestone_IssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -45084,6 +50471,26 @@ export type ProjectsQuery = { __typename?: "Query" } & {
                 >;
               }
           >;
+          syncedWith?: Maybe<
+            Array<
+              { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+                  metadata?: Maybe<
+                    | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                        ExternalEntityInfoGithubMetadata,
+                        "number" | "owner" | "repo"
+                      >)
+                    | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                        ExternalEntityInfoJiraMetadata,
+                        "issueTypeId" | "projectId" | "issueKey"
+                      >)
+                    | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                        ExternalEntitySlackMetadata,
+                        "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                      >)
+                  >;
+                }
+            >
+          >;
           lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
           lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
           lead?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
@@ -45222,6 +50629,26 @@ export type Roadmap_ProjectsQuery = { __typename?: "Query" } & {
                     > & { updatedBy?: Maybe<{ __typename?: "User" } & Pick<User, "id">> }
                   >;
                 }
+            >;
+            syncedWith?: Maybe<
+              Array<
+                { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+                    metadata?: Maybe<
+                      | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                          ExternalEntityInfoGithubMetadata,
+                          "number" | "owner" | "repo"
+                        >)
+                      | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                          ExternalEntityInfoJiraMetadata,
+                          "issueTypeId" | "projectId" | "issueKey"
+                        >)
+                      | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                          ExternalEntitySlackMetadata,
+                          "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                        >)
+                    >;
+                  }
+              >
             >;
             lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
             lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
@@ -45464,6 +50891,48 @@ export type SearchIssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -45629,6 +51098,26 @@ export type SearchProjectsQuery = { __typename?: "Query" } & {
                     > & { updatedBy?: Maybe<{ __typename?: "User" } & Pick<User, "id">> }
                   >;
                 }
+            >;
+            syncedWith?: Maybe<
+              Array<
+                { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+                    metadata?: Maybe<
+                      | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                          ExternalEntityInfoGithubMetadata,
+                          "number" | "owner" | "repo"
+                        >)
+                      | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                          ExternalEntityInfoJiraMetadata,
+                          "issueTypeId" | "projectId" | "issueKey"
+                        >)
+                      | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                          ExternalEntitySlackMetadata,
+                          "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                        >)
+                    >;
+                  }
+              >
             >;
             lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
             lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
@@ -45932,6 +51421,48 @@ export type Team_IssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -46202,6 +51733,26 @@ export type Team_ProjectsQuery = { __typename?: "Query" } & {
                     > & { updatedBy?: Maybe<{ __typename?: "User" } & Pick<User, "id">> }
                   >;
                 }
+            >;
+            syncedWith?: Maybe<
+              Array<
+                { __typename: "ExternalEntityInfo" } & Pick<ExternalEntityInfo, "id" | "service"> & {
+                    metadata?: Maybe<
+                      | ({ __typename: "ExternalEntityInfoGithubMetadata" } & Pick<
+                          ExternalEntityInfoGithubMetadata,
+                          "number" | "owner" | "repo"
+                        >)
+                      | ({ __typename: "ExternalEntityInfoJiraMetadata" } & Pick<
+                          ExternalEntityInfoJiraMetadata,
+                          "issueTypeId" | "projectId" | "issueKey"
+                        >)
+                      | ({ __typename: "ExternalEntitySlackMetadata" } & Pick<
+                          ExternalEntitySlackMetadata,
+                          "messageUrl" | "channelId" | "channelName" | "isFromSlack"
+                        >)
+                    >;
+                  }
+              >
             >;
             lastUpdate?: Maybe<{ __typename?: "ProjectUpdate" } & Pick<ProjectUpdate, "id">>;
             lastAppliedTemplate?: Maybe<{ __typename?: "Template" } & Pick<Template, "id">>;
@@ -46758,6 +52309,48 @@ export type User_AssignedIssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -46879,6 +52472,48 @@ export type User_CreatedIssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -47000,6 +52635,48 @@ export type User_DelegatedIssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -48240,6 +53917,48 @@ export type Viewer_AssignedIssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -48360,6 +54079,48 @@ export type Viewer_CreatedIssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -48480,6 +54241,48 @@ export type Viewer_DelegatedIssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -48829,6 +54632,48 @@ export type WorkflowState_IssuesQuery = { __typename?: "Query" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -48974,31 +54819,6 @@ export type AirbyteIntegrationConnectMutation = { __typename?: "Mutation" } & {
     IntegrationPayload,
     "lastSyncId" | "success"
   > & { integration?: Maybe<{ __typename?: "Integration" } & Pick<Integration, "id">> };
-};
-
-export type CreateAsksWebSettingsMutationVariables = Exact<{
-  emailIntakeAddress?: InputMaybe<AsksWebSettingsEmailIntakeAddressInput>;
-  input: AsksWebSettingsCreateInput;
-}>;
-
-export type CreateAsksWebSettingsMutation = { __typename?: "Mutation" } & {
-  asksWebSettingsCreate: { __typename: "AsksWebSettingsPayload" } & Pick<
-    AsksWebSettingsPayload,
-    "lastSyncId" | "success"
-  > & { asksWebSettings: { __typename?: "AsksWebSettings" } & Pick<AsksWebSettings, "id"> };
-};
-
-export type UpdateAsksWebSettingsMutationVariables = Exact<{
-  emailIntakeAddress?: InputMaybe<AsksWebSettingsEmailIntakeAddressInput>;
-  id: Scalars["String"];
-  input: AsksWebSettingsUpdateInput;
-}>;
-
-export type UpdateAsksWebSettingsMutation = { __typename?: "Mutation" } & {
-  asksWebSettingsUpdate: { __typename: "AsksWebSettingsPayload" } & Pick<
-    AsksWebSettingsPayload,
-    "lastSyncId" | "success"
-  > & { asksWebSettings: { __typename?: "AsksWebSettings" } & Pick<AsksWebSettings, "id"> };
 };
 
 export type CreateAttachmentMutationVariables = Exact<{
@@ -50933,6 +56753,48 @@ export type CreateIssueBatchMutation = { __typename?: "Mutation" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -51042,6 +56904,48 @@ export type UpdateIssueBatchMutation = { __typename?: "Mutation" } & {
                   user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
                 }
             >;
+            sharedAccess: { __typename: "IssueSharedAccess" } & Pick<
+              IssueSharedAccess,
+              "sharedWithCount" | "viewerHasOnlySharedAccess" | "isShared"
+            > & {
+                sharedWithUsers: Array<
+                  { __typename: "User" } & Pick<
+                    User,
+                    | "statusUntilAt"
+                    | "description"
+                    | "avatarUrl"
+                    | "createdIssueCount"
+                    | "disableReason"
+                    | "avatarBackgroundColor"
+                    | "statusEmoji"
+                    | "initials"
+                    | "statusLabel"
+                    | "updatedAt"
+                    | "lastSeen"
+                    | "timezone"
+                    | "archivedAt"
+                    | "createdAt"
+                    | "id"
+                    | "gitHubUserId"
+                    | "displayName"
+                    | "email"
+                    | "name"
+                    | "url"
+                    | "active"
+                    | "guest"
+                    | "app"
+                    | "admin"
+                    | "owner"
+                    | "isAssignable"
+                    | "isMentionable"
+                    | "isMe"
+                    | "supportsAgentSessions"
+                    | "canAccessAnyPublicTeam"
+                    | "calendarHash"
+                    | "inviteHash"
+                  >
+                >;
+              };
             delegate?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
             botActor?: Maybe<
               { __typename: "ActorBot" } & Pick<
@@ -56556,6 +62460,14 @@ export type TimeScheduleUpsertExternalMutation = { __typename?: "Mutation" } & {
   > & { timeSchedule: { __typename?: "TimeSchedule" } & Pick<TimeSchedule, "id"> };
 };
 
+export type TrackAnonymousEventMutationVariables = Exact<{
+  input: EventTrackingInput;
+}>;
+
+export type TrackAnonymousEventMutation = { __typename?: "Mutation" } & {
+  trackAnonymousEvent: { __typename: "EventTrackingPayload" } & Pick<EventTrackingPayload, "success">;
+};
+
 export type CreateTriageResponsibilityMutationVariables = Exact<{
   input: TriageResponsibilityCreateInput;
 }>;
@@ -56721,8 +62633,198 @@ export type CreateViewPreferencesMutation = { __typename?: "Mutation" } & {
       > & {
           preferences: { __typename: "ViewPreferencesValues" } & Pick<
             ViewPreferencesValues,
-            "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-          >;
+            | "issueNesting"
+            | "projectShowEmptyGroupsBoard"
+            | "projectShowEmptyGroupsList"
+            | "projectShowEmptyGroupsTimeline"
+            | "projectShowEmptyGroups"
+            | "projectShowEmptySubGroupsBoard"
+            | "projectShowEmptySubGroupsList"
+            | "projectShowEmptySubGroupsTimeline"
+            | "projectShowEmptySubGroups"
+            | "hiddenColumns"
+            | "hiddenRows"
+            | "timelineChronologyShowCycleTeamIds"
+            | "customViewsOrdering"
+            | "customerPageNeedsViewGrouping"
+            | "customerPageNeedsViewOrdering"
+            | "customersViewOrdering"
+            | "dashboardsOrdering"
+            | "projectGroupingDateResolution"
+            | "viewOrderingDirection"
+            | "embeddedCustomerNeedsViewOrdering"
+            | "inboxViewOrdering"
+            | "initiativeGrouping"
+            | "initiativesViewOrdering"
+            | "issueGrouping"
+            | "layout"
+            | "viewOrdering"
+            | "issueSubGrouping"
+            | "issueGroupingLabelGroupId"
+            | "issueSubGroupingLabelGroupId"
+            | "projectGroupingLabelGroupId"
+            | "projectSubGroupingLabelGroupId"
+            | "projectGroupOrdering"
+            | "projectCustomerNeedsViewGrouping"
+            | "projectCustomerNeedsViewOrdering"
+            | "projectGrouping"
+            | "projectLayout"
+            | "projectViewOrdering"
+            | "projectSubGrouping"
+            | "releasePipelinesViewOrdering"
+            | "reviewGrouping"
+            | "reviewViewOrdering"
+            | "searchResultType"
+            | "searchViewOrdering"
+            | "teamViewOrdering"
+            | "triageViewOrdering"
+            | "workspaceMembersViewOrdering"
+            | "projectZoomLevel"
+            | "timelineZoomScale"
+            | "showCompletedAgentSessions"
+            | "showCompletedIssues"
+            | "showCompletedProjects"
+            | "showCompletedReviews"
+            | "closedIssuesOrderedByRecency"
+            | "showArchivedItems"
+            | "customerPageNeedsShowCompletedIssuesAndProjects"
+            | "projectCustomerNeedsShowCompletedIssuesLast"
+            | "showDraftReviews"
+            | "showEmptyGroupsBoard"
+            | "showEmptyGroupsList"
+            | "showEmptyGroups"
+            | "showEmptySubGroupsBoard"
+            | "showEmptySubGroupsList"
+            | "showEmptySubGroups"
+            | "customerPageNeedsShowImportantFirst"
+            | "embeddedCustomerNeedsShowImportantFirst"
+            | "projectCustomerNeedsShowImportantFirst"
+            | "showParents"
+            | "fieldPreviewLinks"
+            | "showReadItems"
+            | "showSnoozedItems"
+            | "showSubInitiativeProjects"
+            | "showNestedInitiatives"
+            | "showSubIssues"
+            | "showSubTeamIssues"
+            | "showSubTeamProjects"
+            | "showSupervisedIssues"
+            | "fieldSla"
+            | "fieldSentryIssues"
+            | "customViewFieldDateCreated"
+            | "customViewFieldOwner"
+            | "customViewFieldDateUpdated"
+            | "customViewFieldVisibility"
+            | "customerFieldDomains"
+            | "customerFieldOwner"
+            | "customerFieldRequestCount"
+            | "fieldCustomerCount"
+            | "customerFieldRevenue"
+            | "fieldCustomerRevenue"
+            | "customerFieldSize"
+            | "customerFieldSource"
+            | "customerFieldStatus"
+            | "customerFieldTier"
+            | "fieldCycle"
+            | "dashboardFieldDateCreated"
+            | "dashboardFieldOwner"
+            | "dashboardFieldDateUpdated"
+            | "fieldDueDate"
+            | "initiativeFieldHealth"
+            | "initiativeFieldActivity"
+            | "initiativeFieldDescription"
+            | "initiativeFieldInitiativeHealth"
+            | "initiativeFieldOwner"
+            | "initiativeFieldProjects"
+            | "initiativeFieldTargetDate"
+            | "initiativeFieldTeams"
+            | "fieldDateArchived"
+            | "fieldAssignee"
+            | "fieldDateCreated"
+            | "customerPageNeedsFieldIssueTargetDueDate"
+            | "fieldEstimate"
+            | "customerPageNeedsFieldIssueIdentifier"
+            | "fieldId"
+            | "fieldDateMyActivity"
+            | "customerPageNeedsFieldIssuePriority"
+            | "fieldPriority"
+            | "customerPageNeedsFieldIssueStatus"
+            | "fieldStatus"
+            | "fieldDateUpdated"
+            | "fieldLabels"
+            | "fieldLinkCount"
+            | "memberFieldJoined"
+            | "memberFieldStatus"
+            | "memberFieldTeams"
+            | "fieldMilestone"
+            | "projectFieldActivity"
+            | "projectFieldDateCompleted"
+            | "projectFieldDateCreated"
+            | "projectFieldCustomerCount"
+            | "projectFieldCustomerRevenue"
+            | "projectFieldDescriptionBoard"
+            | "projectFieldDescription"
+            | "fieldProject"
+            | "projectFieldHealthTimeline"
+            | "projectFieldHealth"
+            | "projectFieldInitiatives"
+            | "projectFieldLabels"
+            | "projectFieldLeadTimeline"
+            | "projectFieldLead"
+            | "projectFieldMembersBoard"
+            | "projectFieldMembersList"
+            | "projectFieldMembersTimeline"
+            | "projectFieldMembers"
+            | "projectFieldMilestoneTimeline"
+            | "projectFieldMilestone"
+            | "projectFieldPredictionsTimeline"
+            | "projectFieldPredictions"
+            | "projectFieldPriority"
+            | "projectFieldRelationsTimeline"
+            | "projectFieldRelations"
+            | "projectFieldRoadmapsBoard"
+            | "projectFieldRoadmapsList"
+            | "projectFieldRoadmapsTimeline"
+            | "projectFieldRoadmaps"
+            | "projectFieldRolloutStage"
+            | "projectFieldStartDate"
+            | "projectFieldStatusTimeline"
+            | "projectFieldStatus"
+            | "projectFieldTargetDate"
+            | "projectFieldTeamsBoard"
+            | "projectFieldTeamsList"
+            | "projectFieldTeamsTimeline"
+            | "projectFieldTeams"
+            | "projectFieldDateUpdated"
+            | "fieldPullRequests"
+            | "fieldRelease"
+            | "reviewFieldAvatar"
+            | "reviewFieldChecks"
+            | "reviewFieldIdentifier"
+            | "reviewFieldPreviewLinks"
+            | "reviewFieldRepository"
+            | "teamFieldDateCreated"
+            | "teamFieldCycle"
+            | "teamFieldIdentifier"
+            | "teamFieldMembers"
+            | "teamFieldMembership"
+            | "teamFieldOwner"
+            | "teamFieldProjects"
+            | "teamFieldDateUpdated"
+            | "fieldTimeInCurrentStatus"
+            | "showTriageIssues"
+            | "showUnreadItemsFirst"
+            | "timelineChronologyShowWeekNumbers"
+          > & {
+              projectLabelGroupColumns?: Maybe<
+                Array<
+                  { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                    ViewPreferencesProjectLabelGroupColumn,
+                    "id" | "active"
+                  >
+                >
+              >;
+            };
         };
     };
 };
@@ -56751,8 +62853,198 @@ export type UpdateViewPreferencesMutation = { __typename?: "Mutation" } & {
       > & {
           preferences: { __typename: "ViewPreferencesValues" } & Pick<
             ViewPreferencesValues,
-            "issueGrouping" | "viewOrdering" | "issueSubGrouping" | "showCompletedIssues"
-          >;
+            | "issueNesting"
+            | "projectShowEmptyGroupsBoard"
+            | "projectShowEmptyGroupsList"
+            | "projectShowEmptyGroupsTimeline"
+            | "projectShowEmptyGroups"
+            | "projectShowEmptySubGroupsBoard"
+            | "projectShowEmptySubGroupsList"
+            | "projectShowEmptySubGroupsTimeline"
+            | "projectShowEmptySubGroups"
+            | "hiddenColumns"
+            | "hiddenRows"
+            | "timelineChronologyShowCycleTeamIds"
+            | "customViewsOrdering"
+            | "customerPageNeedsViewGrouping"
+            | "customerPageNeedsViewOrdering"
+            | "customersViewOrdering"
+            | "dashboardsOrdering"
+            | "projectGroupingDateResolution"
+            | "viewOrderingDirection"
+            | "embeddedCustomerNeedsViewOrdering"
+            | "inboxViewOrdering"
+            | "initiativeGrouping"
+            | "initiativesViewOrdering"
+            | "issueGrouping"
+            | "layout"
+            | "viewOrdering"
+            | "issueSubGrouping"
+            | "issueGroupingLabelGroupId"
+            | "issueSubGroupingLabelGroupId"
+            | "projectGroupingLabelGroupId"
+            | "projectSubGroupingLabelGroupId"
+            | "projectGroupOrdering"
+            | "projectCustomerNeedsViewGrouping"
+            | "projectCustomerNeedsViewOrdering"
+            | "projectGrouping"
+            | "projectLayout"
+            | "projectViewOrdering"
+            | "projectSubGrouping"
+            | "releasePipelinesViewOrdering"
+            | "reviewGrouping"
+            | "reviewViewOrdering"
+            | "searchResultType"
+            | "searchViewOrdering"
+            | "teamViewOrdering"
+            | "triageViewOrdering"
+            | "workspaceMembersViewOrdering"
+            | "projectZoomLevel"
+            | "timelineZoomScale"
+            | "showCompletedAgentSessions"
+            | "showCompletedIssues"
+            | "showCompletedProjects"
+            | "showCompletedReviews"
+            | "closedIssuesOrderedByRecency"
+            | "showArchivedItems"
+            | "customerPageNeedsShowCompletedIssuesAndProjects"
+            | "projectCustomerNeedsShowCompletedIssuesLast"
+            | "showDraftReviews"
+            | "showEmptyGroupsBoard"
+            | "showEmptyGroupsList"
+            | "showEmptyGroups"
+            | "showEmptySubGroupsBoard"
+            | "showEmptySubGroupsList"
+            | "showEmptySubGroups"
+            | "customerPageNeedsShowImportantFirst"
+            | "embeddedCustomerNeedsShowImportantFirst"
+            | "projectCustomerNeedsShowImportantFirst"
+            | "showParents"
+            | "fieldPreviewLinks"
+            | "showReadItems"
+            | "showSnoozedItems"
+            | "showSubInitiativeProjects"
+            | "showNestedInitiatives"
+            | "showSubIssues"
+            | "showSubTeamIssues"
+            | "showSubTeamProjects"
+            | "showSupervisedIssues"
+            | "fieldSla"
+            | "fieldSentryIssues"
+            | "customViewFieldDateCreated"
+            | "customViewFieldOwner"
+            | "customViewFieldDateUpdated"
+            | "customViewFieldVisibility"
+            | "customerFieldDomains"
+            | "customerFieldOwner"
+            | "customerFieldRequestCount"
+            | "fieldCustomerCount"
+            | "customerFieldRevenue"
+            | "fieldCustomerRevenue"
+            | "customerFieldSize"
+            | "customerFieldSource"
+            | "customerFieldStatus"
+            | "customerFieldTier"
+            | "fieldCycle"
+            | "dashboardFieldDateCreated"
+            | "dashboardFieldOwner"
+            | "dashboardFieldDateUpdated"
+            | "fieldDueDate"
+            | "initiativeFieldHealth"
+            | "initiativeFieldActivity"
+            | "initiativeFieldDescription"
+            | "initiativeFieldInitiativeHealth"
+            | "initiativeFieldOwner"
+            | "initiativeFieldProjects"
+            | "initiativeFieldTargetDate"
+            | "initiativeFieldTeams"
+            | "fieldDateArchived"
+            | "fieldAssignee"
+            | "fieldDateCreated"
+            | "customerPageNeedsFieldIssueTargetDueDate"
+            | "fieldEstimate"
+            | "customerPageNeedsFieldIssueIdentifier"
+            | "fieldId"
+            | "fieldDateMyActivity"
+            | "customerPageNeedsFieldIssuePriority"
+            | "fieldPriority"
+            | "customerPageNeedsFieldIssueStatus"
+            | "fieldStatus"
+            | "fieldDateUpdated"
+            | "fieldLabels"
+            | "fieldLinkCount"
+            | "memberFieldJoined"
+            | "memberFieldStatus"
+            | "memberFieldTeams"
+            | "fieldMilestone"
+            | "projectFieldActivity"
+            | "projectFieldDateCompleted"
+            | "projectFieldDateCreated"
+            | "projectFieldCustomerCount"
+            | "projectFieldCustomerRevenue"
+            | "projectFieldDescriptionBoard"
+            | "projectFieldDescription"
+            | "fieldProject"
+            | "projectFieldHealthTimeline"
+            | "projectFieldHealth"
+            | "projectFieldInitiatives"
+            | "projectFieldLabels"
+            | "projectFieldLeadTimeline"
+            | "projectFieldLead"
+            | "projectFieldMembersBoard"
+            | "projectFieldMembersList"
+            | "projectFieldMembersTimeline"
+            | "projectFieldMembers"
+            | "projectFieldMilestoneTimeline"
+            | "projectFieldMilestone"
+            | "projectFieldPredictionsTimeline"
+            | "projectFieldPredictions"
+            | "projectFieldPriority"
+            | "projectFieldRelationsTimeline"
+            | "projectFieldRelations"
+            | "projectFieldRoadmapsBoard"
+            | "projectFieldRoadmapsList"
+            | "projectFieldRoadmapsTimeline"
+            | "projectFieldRoadmaps"
+            | "projectFieldRolloutStage"
+            | "projectFieldStartDate"
+            | "projectFieldStatusTimeline"
+            | "projectFieldStatus"
+            | "projectFieldTargetDate"
+            | "projectFieldTeamsBoard"
+            | "projectFieldTeamsList"
+            | "projectFieldTeamsTimeline"
+            | "projectFieldTeams"
+            | "projectFieldDateUpdated"
+            | "fieldPullRequests"
+            | "fieldRelease"
+            | "reviewFieldAvatar"
+            | "reviewFieldChecks"
+            | "reviewFieldIdentifier"
+            | "reviewFieldPreviewLinks"
+            | "reviewFieldRepository"
+            | "teamFieldDateCreated"
+            | "teamFieldCycle"
+            | "teamFieldIdentifier"
+            | "teamFieldMembers"
+            | "teamFieldMembership"
+            | "teamFieldOwner"
+            | "teamFieldProjects"
+            | "teamFieldDateUpdated"
+            | "fieldTimeInCurrentStatus"
+            | "showTriageIssues"
+            | "showUnreadItemsFirst"
+            | "timelineChronologyShowWeekNumbers"
+          > & {
+              projectLabelGroupColumns?: Maybe<
+                Array<
+                  { __typename: "ViewPreferencesProjectLabelGroupColumn" } & Pick<
+                    ViewPreferencesProjectLabelGroupColumn,
+                    "id" | "active"
+                  >
+                >
+              >;
+            };
         };
     };
 };
@@ -61079,6 +67371,7 @@ export const ProjectUpdateWebhookPayloadFragmentDoc = new TypedDocumentString(
   url
   bodyData
   body
+  diffMarkdown
   editedAt
   health
   projectId
@@ -61155,6 +67448,7 @@ export const ProjectWebhookPayloadFragmentDoc = new TypedDocumentString(
   content
   documentContentId
   startDate
+  syncedWith
   health
   icon
   initiatives {
@@ -61621,6 +67915,7 @@ export const InitiativeUpdateWebhookPayloadFragmentDoc = new TypedDocumentString
   url
   bodyData
   body
+  diffMarkdown
   editedAt
   health
   initiativeId
@@ -62615,46 +68910,6 @@ export const ApplicationFragmentDoc = new TypedDocumentString(
     `,
   { fragmentName: "Application" }
 ) as unknown as TypedDocumentString<ApplicationFragment, unknown>;
-export const AsksWebSettingsFragmentDoc = new TypedDocumentString(
-  `
-    fragment AsksWebSettings on AsksWebSettings {
-  __typename
-  domain
-  emailIntakeAddress {
-    id
-  }
-  identityProvider {
-    ...IdentityProvider
-  }
-  updatedAt
-  archivedAt
-  createdAt
-  id
-  creator {
-    id
-  }
-}
-    fragment IdentityProvider on IdentityProvider {
-  __typename
-  ssoBinding
-  ssoEndpoint
-  priority
-  ssoSignAlgo
-  issuerEntityId
-  updatedAt
-  spEntityId
-  archivedAt
-  createdAt
-  type
-  id
-  samlEnabled
-  scimEnabled
-  defaultMigrated
-  allowNameChange
-  ssoSigningCert
-}`,
-  { fragmentName: "AsksWebSettings" }
-) as unknown as TypedDocumentString<AsksWebSettingsFragment, unknown>;
 export const TeamWithParentWebhookPayloadFragmentDoc = new TypedDocumentString(
   `
     fragment TeamWithParentWebhookPayload on TeamWithParentWebhookPayload {
@@ -63712,19 +69967,6 @@ fragment SlackAsksTeamSettings on SlackAsksTeamSettings {
 }`,
   { fragmentName: "AsksChannelConnectPayload" }
 ) as unknown as TypedDocumentString<AsksChannelConnectPayloadFragment, unknown>;
-export const AsksWebSettingsPayloadFragmentDoc = new TypedDocumentString(
-  `
-    fragment AsksWebSettingsPayload on AsksWebSettingsPayload {
-  __typename
-  asksWebSettings {
-    id
-  }
-  lastSyncId
-  success
-}
-    `,
-  { fragmentName: "AsksWebSettingsPayload" }
-) as unknown as TypedDocumentString<AsksWebSettingsPayloadFragment, unknown>;
 export const AttachmentFragmentDoc = new TypedDocumentString(
   `
     fragment Attachment on Attachment {
@@ -64718,16 +70960,211 @@ fragment AuthOrganization on AuthOrganization {
 }`,
   { fragmentName: "CreateOrJoinOrganizationResponse" }
 ) as unknown as TypedDocumentString<CreateOrJoinOrganizationResponseFragment, unknown>;
+export const ViewPreferencesProjectLabelGroupColumnFragmentDoc = new TypedDocumentString(
+  `
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
+    `,
+  { fragmentName: "ViewPreferencesProjectLabelGroupColumn" }
+) as unknown as TypedDocumentString<ViewPreferencesProjectLabelGroupColumnFragment, unknown>;
 export const ViewPreferencesValuesFragmentDoc = new TypedDocumentString(
   `
     fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }
-    `,
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}`,
   { fragmentName: "ViewPreferencesValues" }
 ) as unknown as TypedDocumentString<ViewPreferencesValuesFragment, unknown>;
 export const ViewPreferencesFragmentDoc = new TypedDocumentString(
@@ -64744,12 +71181,198 @@ export const ViewPreferencesFragmentDoc = new TypedDocumentString(
   }
   viewType
 }
-    fragment ViewPreferencesValues on ViewPreferencesValues {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
   __typename
+  id
+  active
+}
+fragment ViewPreferencesValues on ViewPreferencesValues {
+  __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`,
   { fragmentName: "ViewPreferences" }
 ) as unknown as TypedDocumentString<ViewPreferencesFragment, unknown>;
@@ -64795,7 +71418,12 @@ export const CustomViewFragmentDoc = new TypedDocumentString(
   }
   shared
 }
-    fragment ViewPreferences on ViewPreferences {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
+fragment ViewPreferences on ViewPreferences {
   __typename
   updatedAt
   archivedAt
@@ -64809,10 +71437,191 @@ export const CustomViewFragmentDoc = new TypedDocumentString(
 }
 fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`,
   { fragmentName: "CustomView" }
 ) as unknown as TypedDocumentString<CustomViewFragment, unknown>;
@@ -64867,6 +71676,11 @@ export const CustomViewConnectionFragmentDoc = new TypedDocumentString(
   }
   shared
 }
+fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
 fragment ViewPreferences on ViewPreferences {
   __typename
   updatedAt
@@ -64888,10 +71702,191 @@ fragment PageInfo on PageInfo {
 }
 fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`,
   { fragmentName: "CustomViewConnection" }
 ) as unknown as TypedDocumentString<CustomViewConnectionFragment, unknown>;
@@ -65998,6 +72993,15 @@ export const EntityExternalLinkPayloadFragmentDoc = new TypedDocumentString(
     `,
   { fragmentName: "EntityExternalLinkPayload" }
 ) as unknown as TypedDocumentString<EntityExternalLinkPayloadFragment, unknown>;
+export const EventTrackingPayloadFragmentDoc = new TypedDocumentString(
+  `
+    fragment EventTrackingPayload on EventTrackingPayload {
+  __typename
+  success
+}
+    `,
+  { fragmentName: "EventTrackingPayload" }
+) as unknown as TypedDocumentString<EventTrackingPayloadFragment, unknown>;
 export const ExternalUserFragmentDoc = new TypedDocumentString(
   `
     fragment ExternalUser on ExternalUser {
@@ -67291,6 +74295,94 @@ export const IntegrationsSettingsPayloadFragmentDoc = new TypedDocumentString(
     `,
   { fragmentName: "IntegrationsSettingsPayload" }
 ) as unknown as TypedDocumentString<IntegrationsSettingsPayloadFragment, unknown>;
+export const UserFragmentDoc = new TypedDocumentString(
+  `
+    fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
+    `,
+  { fragmentName: "User" }
+) as unknown as TypedDocumentString<UserFragment, unknown>;
+export const IssueSharedAccessFragmentDoc = new TypedDocumentString(
+  `
+    fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
+}
+    fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}`,
+  { fragmentName: "IssueSharedAccess" }
+) as unknown as TypedDocumentString<IssueSharedAccessFragment, unknown>;
 export const IssueFragmentDoc = new TypedDocumentString(
   `
     fragment Issue on Issue {
@@ -67307,6 +74399,9 @@ export const IssueFragmentDoc = new TypedDocumentString(
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -67431,6 +74526,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment ExternalEntityInfo on ExternalEntityInfo {
   __typename
   metadata {
@@ -67465,6 +74595,15 @@ fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
   channelId
   channelName
   isFromSlack
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }`,
   { fragmentName: "Issue" }
 ) as unknown as TypedDocumentString<IssueFragment, unknown>;
@@ -67513,6 +74652,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -67527,6 +74701,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -67650,6 +74827,15 @@ fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
   channelId
   channelName
   isFromSlack
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }`,
   { fragmentName: "IssueBatchPayload" }
 ) as unknown as TypedDocumentString<IssueBatchPayloadFragment, unknown>;
@@ -67699,6 +74885,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -67713,6 +74934,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -67837,6 +75061,15 @@ fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
   channelName
   isFromSlack
 }
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
+}
 fragment PageInfo on PageInfo {
   __typename
   startCursor
@@ -67866,46 +75099,6 @@ export const IssueRelationHistoryPayloadFragmentDoc = new TypedDocumentString(
     `,
   { fragmentName: "IssueRelationHistoryPayload" }
 ) as unknown as TypedDocumentString<IssueRelationHistoryPayloadFragment, unknown>;
-export const UserFragmentDoc = new TypedDocumentString(
-  `
-    fragment User on User {
-  __typename
-  statusUntilAt
-  description
-  avatarUrl
-  createdIssueCount
-  disableReason
-  avatarBackgroundColor
-  statusEmoji
-  initials
-  statusLabel
-  updatedAt
-  lastSeen
-  timezone
-  archivedAt
-  createdAt
-  id
-  gitHubUserId
-  displayName
-  email
-  name
-  url
-  active
-  guest
-  app
-  admin
-  owner
-  isAssignable
-  isMentionable
-  isMe
-  supportsAgentSessions
-  canAccessAnyPublicTeam
-  calendarHash
-  inviteHash
-}
-    `,
-  { fragmentName: "User" }
-) as unknown as TypedDocumentString<UserFragment, unknown>;
 export const IssueImportFragmentDoc = new TypedDocumentString(
   `
     fragment IssueImport on IssueImport {
@@ -68644,6 +75837,9 @@ export const IssueSearchResultFragmentDoc = new TypedDocumentString(
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -68768,6 +75964,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment ExternalEntityInfo on ExternalEntityInfo {
   __typename
   metadata {
@@ -68802,6 +76033,15 @@ fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
   channelId
   channelName
   isFromSlack
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }`,
   { fragmentName: "IssueSearchResult" }
 ) as unknown as TypedDocumentString<IssueSearchResultFragment, unknown>;
@@ -68854,6 +76094,41 @@ fragment Reaction on Reaction {
   user {
     id
   }
+}
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
 }
 fragment ArchiveResponse on ArchiveResponse {
   __typename
@@ -68912,6 +76187,9 @@ fragment IssueSearchResult on IssueSearchResult {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -69000,6 +76278,15 @@ fragment IssueSearchResult on IssueSearchResult {
   state {
     id
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -70952,6 +78239,9 @@ export const ProjectFragmentDoc = new TypedDocumentString(
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -71064,6 +78354,41 @@ fragment AiPromptRules on AiPromptRules {
   updatedBy {
     id
   }
+}
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
 }`,
   { fragmentName: "Project" }
 ) as unknown as TypedDocumentString<ProjectFragment, unknown>;
@@ -71123,6 +78448,9 @@ fragment Project on Project {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -71204,6 +78532,41 @@ fragment AiPromptRules on AiPromptRules {
   updatedBy {
     id
   }
+}
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -71698,6 +79061,9 @@ export const ProjectSearchResultFragmentDoc = new TypedDocumentString(
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -71810,6 +79176,41 @@ fragment AiPromptRules on AiPromptRules {
   updatedBy {
     id
   }
+}
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
 }`,
   { fragmentName: "ProjectSearchResult" }
 ) as unknown as TypedDocumentString<ProjectSearchResultFragment, unknown>;
@@ -71888,6 +79289,41 @@ fragment ArchiveResponse on ArchiveResponse {
   databaseVersion
   includesDependencies
 }
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
+}
 fragment PageInfo on PageInfo {
   __typename
   startCursor
@@ -71910,6 +79346,9 @@ fragment ProjectSearchResult on ProjectSearchResult {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -73286,7 +80725,12 @@ export const ViewPreferencesPayloadFragmentDoc = new TypedDocumentString(
   }
   success
 }
-    fragment ViewPreferences on ViewPreferences {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
+fragment ViewPreferences on ViewPreferences {
   __typename
   updatedAt
   archivedAt
@@ -73300,10 +80744,191 @@ export const ViewPreferencesPayloadFragmentDoc = new TypedDocumentString(
 }
 fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`,
   { fragmentName: "ViewPreferencesPayload" }
 ) as unknown as TypedDocumentString<ViewPreferencesPayloadFragment, unknown>;
@@ -74020,78 +81645,6 @@ export const ApplicationInfoDocument = new TypedDocumentString(`
   clientId
   developerUrl
 }`) as unknown as TypedDocumentString<ApplicationInfoQuery, ApplicationInfoQueryVariables>;
-export const AsksWebSettingDocument = new TypedDocumentString(`
-    query asksWebSetting($id: String!) {
-  asksWebSetting(id: $id) {
-    ...AsksWebSettings
-  }
-}
-    fragment IdentityProvider on IdentityProvider {
-  __typename
-  ssoBinding
-  ssoEndpoint
-  priority
-  ssoSignAlgo
-  issuerEntityId
-  updatedAt
-  spEntityId
-  archivedAt
-  createdAt
-  type
-  id
-  samlEnabled
-  scimEnabled
-  defaultMigrated
-  allowNameChange
-  ssoSigningCert
-}
-fragment AsksWebSettings on AsksWebSettings {
-  __typename
-  domain
-  emailIntakeAddress {
-    id
-  }
-  identityProvider {
-    ...IdentityProvider
-  }
-  updatedAt
-  archivedAt
-  createdAt
-  id
-  creator {
-    id
-  }
-}`) as unknown as TypedDocumentString<AsksWebSettingQuery, AsksWebSettingQueryVariables>;
-export const AsksWebSetting_IdentityProviderDocument = new TypedDocumentString(`
-    query asksWebSetting_identityProvider($id: String!) {
-  asksWebSetting(id: $id) {
-    identityProvider {
-      ...IdentityProvider
-    }
-  }
-}
-    fragment IdentityProvider on IdentityProvider {
-  __typename
-  ssoBinding
-  ssoEndpoint
-  priority
-  ssoSignAlgo
-  issuerEntityId
-  updatedAt
-  spEntityId
-  archivedAt
-  createdAt
-  type
-  id
-  samlEnabled
-  scimEnabled
-  defaultMigrated
-  allowNameChange
-  ssoSigningCert
-}`) as unknown as TypedDocumentString<
-  AsksWebSetting_IdentityProviderQuery,
-  AsksWebSetting_IdentityProviderQueryVariables
->;
 export const AttachmentDocument = new TypedDocumentString(`
     query attachment($id: String!) {
   attachment(id: $id) {
@@ -74166,6 +81719,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -74180,6 +81768,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -74303,6 +81894,15 @@ fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
   channelId
   channelName
   isFromSlack
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }`) as unknown as TypedDocumentString<AttachmentIssueQuery, AttachmentIssueQueryVariables>;
 export const AttachmentIssue_AttachmentsDocument = new TypedDocumentString(`
     query attachmentIssue_attachments($id: String!, $after: String, $before: String, $filter: AttachmentFilter, $first: Int, $includeArchived: Boolean, $last: Int, $orderBy: PaginationOrderBy) {
@@ -74431,6 +82031,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -74445,6 +82080,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -74577,6 +82215,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -75517,6 +83164,58 @@ fragment PageInfo on PageInfo {
   hasPreviousPage
   hasNextPage
 }`) as unknown as TypedDocumentString<AttachmentIssue_RelationsQuery, AttachmentIssue_RelationsQueryVariables>;
+export const AttachmentIssue_SharedAccessDocument = new TypedDocumentString(`
+    query attachmentIssue_sharedAccess($id: String!) {
+  attachmentIssue(id: $id) {
+    sharedAccess {
+      ...IssueSharedAccess
+    }
+  }
+}
+    fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
+}`) as unknown as TypedDocumentString<AttachmentIssue_SharedAccessQuery, AttachmentIssue_SharedAccessQueryVariables>;
 export const AttachmentIssue_StateHistoryDocument = new TypedDocumentString(`
     query attachmentIssue_stateHistory($id: String!, $after: String, $before: String, $first: Int, $last: Int) {
   attachmentIssue(id: $id) {
@@ -76377,6 +84076,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -76391,6 +84125,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -76523,6 +84260,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -76932,6 +84678,11 @@ export const CustomViewDocument = new TypedDocumentString(`
   }
   shared
 }
+fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
 fragment ViewPreferences on ViewPreferences {
   __typename
   updatedAt
@@ -76946,10 +84697,191 @@ fragment ViewPreferences on ViewPreferences {
 }
 fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`) as unknown as TypedDocumentString<CustomViewQuery, CustomViewQueryVariables>;
 export const CustomView_InitiativesDocument = new TypedDocumentString(`
     query customView_initiatives($id: String!, $after: String, $before: String, $filter: InitiativeFilter, $first: Int, $includeArchived: Boolean, $last: Int, $orderBy: PaginationOrderBy) {
@@ -77135,6 +85067,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -77149,6 +85116,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -77282,6 +85252,15 @@ fragment IssueConnection on IssueConnection {
     ...PageInfo
   }
 }
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
+}
 fragment PageInfo on PageInfo {
   __typename
   startCursor
@@ -77297,7 +85276,12 @@ export const CustomView_OrganizationViewPreferencesDocument = new TypedDocumentS
     }
   }
 }
-    fragment ViewPreferences on ViewPreferences {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
+fragment ViewPreferences on ViewPreferences {
   __typename
   updatedAt
   archivedAt
@@ -77311,10 +85295,191 @@ export const CustomView_OrganizationViewPreferencesDocument = new TypedDocumentS
 }
 fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`) as unknown as TypedDocumentString<
   CustomView_OrganizationViewPreferencesQuery,
   CustomView_OrganizationViewPreferencesQueryVariables
@@ -77329,12 +85494,198 @@ export const CustomView_OrganizationViewPreferences_PreferencesDocument = new Ty
     }
   }
 }
-    fragment ViewPreferencesValues on ViewPreferencesValues {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
   __typename
+  id
+  active
+}
+fragment ViewPreferencesValues on ViewPreferencesValues {
+  __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`) as unknown as TypedDocumentString<
   CustomView_OrganizationViewPreferences_PreferencesQuery,
   CustomView_OrganizationViewPreferences_PreferencesQueryVariables
@@ -77402,6 +85753,9 @@ fragment Project on Project {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -77484,6 +85838,41 @@ fragment AiPromptRules on AiPromptRules {
     id
   }
 }
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
+}
 fragment PageInfo on PageInfo {
   __typename
   startCursor
@@ -77508,7 +85897,12 @@ export const CustomView_UserViewPreferencesDocument = new TypedDocumentString(`
     }
   }
 }
-    fragment ViewPreferences on ViewPreferences {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
+fragment ViewPreferences on ViewPreferences {
   __typename
   updatedAt
   archivedAt
@@ -77522,10 +85916,191 @@ export const CustomView_UserViewPreferencesDocument = new TypedDocumentString(`
 }
 fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`) as unknown as TypedDocumentString<
   CustomView_UserViewPreferencesQuery,
   CustomView_UserViewPreferencesQueryVariables
@@ -77540,12 +86115,198 @@ export const CustomView_UserViewPreferences_PreferencesDocument = new TypedDocum
     }
   }
 }
-    fragment ViewPreferencesValues on ViewPreferencesValues {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
   __typename
+  id
+  active
+}
+fragment ViewPreferencesValues on ViewPreferencesValues {
+  __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`) as unknown as TypedDocumentString<
   CustomView_UserViewPreferences_PreferencesQuery,
   CustomView_UserViewPreferences_PreferencesQueryVariables
@@ -77558,12 +86319,198 @@ export const CustomView_ViewPreferencesValuesDocument = new TypedDocumentString(
     }
   }
 }
-    fragment ViewPreferencesValues on ViewPreferencesValues {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
   __typename
+  id
+  active
+}
+fragment ViewPreferencesValues on ViewPreferencesValues {
+  __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`) as unknown as TypedDocumentString<
   CustomView_ViewPreferencesValuesQuery,
   CustomView_ViewPreferencesValuesQueryVariables
@@ -77633,6 +86580,11 @@ export const CustomViewsDocument = new TypedDocumentString(`
   }
   shared
 }
+fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
 fragment ViewPreferences on ViewPreferences {
   __typename
   updatedAt
@@ -77663,10 +86615,191 @@ fragment PageInfo on PageInfo {
 }
 fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`) as unknown as TypedDocumentString<CustomViewsQuery, CustomViewsQueryVariables>;
 export const CustomerDocument = new TypedDocumentString(`
     query customer($id: String!) {
@@ -78136,6 +87269,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -78150,6 +87318,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -78282,6 +87453,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -78341,6 +87521,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -78355,6 +87570,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -78487,6 +87705,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -79902,6 +89129,9 @@ fragment Project on Project {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -79983,6 +89213,41 @@ fragment AiPromptRules on AiPromptRules {
   updatedBy {
     id
   }
+}
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -80985,6 +90250,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -80999,6 +90299,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -81122,6 +90425,15 @@ fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
   channelId
   channelName
   isFromSlack
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }`) as unknown as TypedDocumentString<IssueQuery, IssueQueryVariables>;
 export const Issue_AttachmentsDocument = new TypedDocumentString(`
     query issue_attachments($id: String!, $after: String, $before: String, $filter: AttachmentFilter, $first: Int, $includeArchived: Boolean, $last: Int, $orderBy: PaginationOrderBy) {
@@ -81250,6 +90562,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -81264,6 +90611,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -81396,6 +90746,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -82330,6 +91689,58 @@ fragment PageInfo on PageInfo {
   hasPreviousPage
   hasNextPage
 }`) as unknown as TypedDocumentString<Issue_RelationsQuery, Issue_RelationsQueryVariables>;
+export const Issue_SharedAccessDocument = new TypedDocumentString(`
+    query issue_sharedAccess($id: String!) {
+  issue(id: $id) {
+    sharedAccess {
+      ...IssueSharedAccess
+    }
+  }
+}
+    fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
+}`) as unknown as TypedDocumentString<Issue_SharedAccessQuery, Issue_SharedAccessQueryVariables>;
 export const Issue_StateHistoryDocument = new TypedDocumentString(`
     query issue_stateHistory($id: String!, $after: String, $before: String, $first: Int, $last: Int) {
   issue(id: $id) {
@@ -82481,6 +91892,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -82495,6 +91941,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -82627,6 +92076,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -82828,6 +92286,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -82842,6 +92335,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -82974,6 +92470,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -83185,6 +92690,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -83199,6 +92739,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -83332,6 +92875,15 @@ fragment IssueConnection on IssueConnection {
     ...PageInfo
   }
 }
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
+}
 fragment PageInfo on PageInfo {
   __typename
   startCursor
@@ -83394,6 +92946,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -83408,6 +92995,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -83531,6 +93121,15 @@ fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
   channelId
   channelName
   isFromSlack
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }`) as unknown as TypedDocumentString<IssueVcsBranchSearchQuery, IssueVcsBranchSearchQueryVariables>;
 export const IssueVcsBranchSearch_AttachmentsDocument = new TypedDocumentString(`
     query issueVcsBranchSearch_attachments($branchName: String!, $after: String, $before: String, $filter: AttachmentFilter, $first: Int, $includeArchived: Boolean, $last: Int, $orderBy: PaginationOrderBy) {
@@ -83662,6 +93261,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -83676,6 +93310,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -83808,6 +93445,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -84757,6 +94403,61 @@ fragment PageInfo on PageInfo {
   IssueVcsBranchSearch_RelationsQuery,
   IssueVcsBranchSearch_RelationsQueryVariables
 >;
+export const IssueVcsBranchSearch_SharedAccessDocument = new TypedDocumentString(`
+    query issueVcsBranchSearch_sharedAccess($branchName: String!) {
+  issueVcsBranchSearch(branchName: $branchName) {
+    sharedAccess {
+      ...IssueSharedAccess
+    }
+  }
+}
+    fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
+}`) as unknown as TypedDocumentString<
+  IssueVcsBranchSearch_SharedAccessQuery,
+  IssueVcsBranchSearch_SharedAccessQueryVariables
+>;
 export const IssueVcsBranchSearch_StateHistoryDocument = new TypedDocumentString(`
     query issueVcsBranchSearch_stateHistory($branchName: String!, $after: String, $before: String, $first: Int, $last: Int) {
   issueVcsBranchSearch(branchName: $branchName) {
@@ -84915,6 +94616,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -84929,6 +94665,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -85061,6 +94800,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -86803,6 +96551,9 @@ fragment Project on Project {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -86884,6 +96635,41 @@ fragment AiPromptRules on AiPromptRules {
   updatedBy {
     id
   }
+}
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
 }`) as unknown as TypedDocumentString<ProjectQuery, ProjectQueryVariables>;
 export const Project_AttachmentsDocument = new TypedDocumentString(`
     query project_attachments($id: String!, $after: String, $before: String, $first: Int, $includeArchived: Boolean, $last: Int, $orderBy: PaginationOrderBy) {
@@ -87707,6 +97493,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -87721,6 +97542,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -87853,6 +97677,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -88590,6 +98423,9 @@ fragment Project on Project {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -88671,6 +98507,41 @@ fragment AiPromptRules on AiPromptRules {
   updatedBy {
     id
   }
+}
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -88980,6 +98851,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -88994,6 +98900,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -89126,6 +99035,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -89812,6 +99730,9 @@ fragment Project on Project {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -89893,6 +99814,41 @@ fragment AiPromptRules on AiPromptRules {
   updatedBy {
     id
   }
+}
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -90029,6 +99985,9 @@ fragment Project on Project {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -90110,6 +100069,41 @@ fragment AiPromptRules on AiPromptRules {
   updatedBy {
     id
   }
+}
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -90397,6 +100391,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment ArchiveResponse on ArchiveResponse {
   __typename
   archive
@@ -90467,6 +100496,9 @@ fragment IssueSearchResult on IssueSearchResult {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -90555,6 +100587,15 @@ fragment IssueSearchResult on IssueSearchResult {
   state {
     id
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -90665,6 +100706,41 @@ fragment ArchiveResponse on ArchiveResponse {
   databaseVersion
   includesDependencies
 }
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
+}
 fragment PageInfo on PageInfo {
   __typename
   startCursor
@@ -90700,6 +100776,9 @@ fragment ProjectSearchResult on ProjectSearchResult {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -91111,6 +101190,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -91125,6 +101239,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -91257,6 +101374,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -91501,6 +101627,9 @@ fragment Project on Project {
   updateRemindersDay
   targetDate
   startDate
+  syncedWith {
+    ...ExternalEntityInfo
+  }
   updateReminderFrequency
   health
   updateRemindersHour
@@ -91582,6 +101711,41 @@ fragment AiPromptRules on AiPromptRules {
   updatedBy {
     id
   }
+}
+fragment ExternalEntityInfo on ExternalEntityInfo {
+  __typename
+  metadata {
+    ... on ExternalEntityInfoGithubMetadata {
+      ...ExternalEntityInfoGithubMetadata
+    }
+    ... on ExternalEntityInfoJiraMetadata {
+      ...ExternalEntityInfoJiraMetadata
+    }
+    ... on ExternalEntitySlackMetadata {
+      ...ExternalEntitySlackMetadata
+    }
+  }
+  id
+  service
+}
+fragment ExternalEntityInfoGithubMetadata on ExternalEntityInfoGithubMetadata {
+  __typename
+  number
+  owner
+  repo
+}
+fragment ExternalEntityInfoJiraMetadata on ExternalEntityInfoJiraMetadata {
+  __typename
+  issueTypeId
+  projectId
+  issueKey
+}
+fragment ExternalEntitySlackMetadata on ExternalEntitySlackMetadata {
+  __typename
+  messageUrl
+  channelId
+  channelName
+  isFromSlack
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -92312,6 +102476,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -92326,6 +102525,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -92458,6 +102660,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -92517,6 +102728,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -92531,6 +102777,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -92663,6 +102912,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -92722,6 +102980,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -92736,6 +103029,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -92868,6 +103164,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -94240,6 +104545,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -94254,6 +104594,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -94386,6 +104729,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -94445,6 +104797,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -94459,6 +104846,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -94591,6 +104981,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -94650,6 +105049,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -94664,6 +105098,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -94796,6 +105233,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -95195,6 +105641,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -95209,6 +105690,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -95341,6 +105825,15 @@ fragment IssueConnection on IssueConnection {
   pageInfo {
     ...PageInfo
   }
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }
 fragment PageInfo on PageInfo {
   __typename
@@ -95487,38 +105980,6 @@ export const AirbyteIntegrationConnectDocument = new TypedDocumentString(`
   }
   success
 }`) as unknown as TypedDocumentString<AirbyteIntegrationConnectMutation, AirbyteIntegrationConnectMutationVariables>;
-export const CreateAsksWebSettingsDocument = new TypedDocumentString(`
-    mutation createAsksWebSettings($emailIntakeAddress: AsksWebSettingsEmailIntakeAddressInput, $input: AsksWebSettingsCreateInput!) {
-  asksWebSettingsCreate(emailIntakeAddress: $emailIntakeAddress, input: $input) {
-    ...AsksWebSettingsPayload
-  }
-}
-    fragment AsksWebSettingsPayload on AsksWebSettingsPayload {
-  __typename
-  asksWebSettings {
-    id
-  }
-  lastSyncId
-  success
-}`) as unknown as TypedDocumentString<CreateAsksWebSettingsMutation, CreateAsksWebSettingsMutationVariables>;
-export const UpdateAsksWebSettingsDocument = new TypedDocumentString(`
-    mutation updateAsksWebSettings($emailIntakeAddress: AsksWebSettingsEmailIntakeAddressInput, $id: String!, $input: AsksWebSettingsUpdateInput!) {
-  asksWebSettingsUpdate(
-    emailIntakeAddress: $emailIntakeAddress
-    id: $id
-    input: $input
-  ) {
-    ...AsksWebSettingsPayload
-  }
-}
-    fragment AsksWebSettingsPayload on AsksWebSettingsPayload {
-  __typename
-  asksWebSettings {
-    id
-  }
-  lastSyncId
-  success
-}`) as unknown as TypedDocumentString<UpdateAsksWebSettingsMutation, UpdateAsksWebSettingsMutationVariables>;
 export const CreateAttachmentDocument = new TypedDocumentString(`
     mutation createAttachment($input: AttachmentCreateInput!) {
   attachmentCreate(input: $input) {
@@ -97976,6 +108437,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -97990,6 +108486,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -98121,6 +108620,15 @@ fragment IssueBatchPayload on IssueBatchPayload {
     ...Issue
   }
   success
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }`) as unknown as TypedDocumentString<CreateIssueBatchMutation, CreateIssueBatchMutationVariables>;
 export const UpdateIssueBatchDocument = new TypedDocumentString(`
     mutation updateIssueBatch($ids: [UUID!]!, $input: IssueUpdateInput!) {
@@ -98163,6 +108671,41 @@ fragment Reaction on Reaction {
     id
   }
 }
+fragment User on User {
+  __typename
+  statusUntilAt
+  description
+  avatarUrl
+  createdIssueCount
+  disableReason
+  avatarBackgroundColor
+  statusEmoji
+  initials
+  statusLabel
+  updatedAt
+  lastSeen
+  timezone
+  archivedAt
+  createdAt
+  id
+  gitHubUserId
+  displayName
+  email
+  name
+  url
+  active
+  guest
+  app
+  admin
+  owner
+  isAssignable
+  isMentionable
+  isMe
+  supportsAgentSessions
+  canAccessAnyPublicTeam
+  calendarHash
+  inviteHash
+}
 fragment Issue on Issue {
   __typename
   trashed
@@ -98177,6 +108720,9 @@ fragment Issue on Issue {
     ...Reaction
   }
   customerTicketCount
+  sharedAccess {
+    ...IssueSharedAccess
+  }
   branchName
   delegate {
     id
@@ -98308,6 +108854,15 @@ fragment IssueBatchPayload on IssueBatchPayload {
     ...Issue
   }
   success
+}
+fragment IssueSharedAccess on IssueSharedAccess {
+  __typename
+  sharedWithCount
+  sharedWithUsers {
+    ...User
+  }
+  viewerHasOnlySharedAccess
+  isShared
 }`) as unknown as TypedDocumentString<UpdateIssueBatchMutation, UpdateIssueBatchMutationVariables>;
 export const CreateIssueDocument = new TypedDocumentString(`
     mutation createIssue($input: IssueCreateInput!) {
@@ -103912,6 +114467,16 @@ export const TimeScheduleUpsertExternalDocument = new TypedDocumentString(`
     id
   }
 }`) as unknown as TypedDocumentString<TimeScheduleUpsertExternalMutation, TimeScheduleUpsertExternalMutationVariables>;
+export const TrackAnonymousEventDocument = new TypedDocumentString(`
+    mutation trackAnonymousEvent($input: EventTrackingInput!) {
+  trackAnonymousEvent(input: $input) {
+    ...EventTrackingPayload
+  }
+}
+    fragment EventTrackingPayload on EventTrackingPayload {
+  __typename
+  success
+}`) as unknown as TypedDocumentString<TrackAnonymousEventMutation, TrackAnonymousEventMutationVariables>;
 export const CreateTriageResponsibilityDocument = new TypedDocumentString(`
     mutation createTriageResponsibility($input: TriageResponsibilityCreateInput!) {
   triageResponsibilityCreate(input: $input) {
@@ -104101,7 +114666,12 @@ export const CreateViewPreferencesDocument = new TypedDocumentString(`
     ...ViewPreferencesPayload
   }
 }
-    fragment ViewPreferences on ViewPreferences {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
+fragment ViewPreferences on ViewPreferences {
   __typename
   updatedAt
   archivedAt
@@ -104123,10 +114693,191 @@ fragment ViewPreferencesPayload on ViewPreferencesPayload {
 }
 fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`) as unknown as TypedDocumentString<CreateViewPreferencesMutation, CreateViewPreferencesMutationVariables>;
 export const DeleteViewPreferencesDocument = new TypedDocumentString(`
     mutation deleteViewPreferences($id: String!) {
@@ -104146,7 +114897,12 @@ export const UpdateViewPreferencesDocument = new TypedDocumentString(`
     ...ViewPreferencesPayload
   }
 }
-    fragment ViewPreferences on ViewPreferences {
+    fragment ViewPreferencesProjectLabelGroupColumn on ViewPreferencesProjectLabelGroupColumn {
+  __typename
+  id
+  active
+}
+fragment ViewPreferences on ViewPreferences {
   __typename
   updatedAt
   archivedAt
@@ -104168,10 +114924,191 @@ fragment ViewPreferencesPayload on ViewPreferencesPayload {
 }
 fragment ViewPreferencesValues on ViewPreferencesValues {
   __typename
+  issueNesting
+  projectShowEmptyGroupsBoard
+  projectShowEmptyGroupsList
+  projectShowEmptyGroupsTimeline
+  projectShowEmptyGroups
+  projectShowEmptySubGroupsBoard
+  projectShowEmptySubGroupsList
+  projectShowEmptySubGroupsTimeline
+  projectShowEmptySubGroups
+  hiddenColumns
+  hiddenRows
+  timelineChronologyShowCycleTeamIds
+  customViewsOrdering
+  customerPageNeedsViewGrouping
+  customerPageNeedsViewOrdering
+  customersViewOrdering
+  dashboardsOrdering
+  projectGroupingDateResolution
+  viewOrderingDirection
+  embeddedCustomerNeedsViewOrdering
+  inboxViewOrdering
+  initiativeGrouping
+  initiativesViewOrdering
   issueGrouping
+  layout
   viewOrdering
   issueSubGrouping
+  issueGroupingLabelGroupId
+  issueSubGroupingLabelGroupId
+  projectGroupingLabelGroupId
+  projectSubGroupingLabelGroupId
+  projectGroupOrdering
+  projectCustomerNeedsViewGrouping
+  projectCustomerNeedsViewOrdering
+  projectGrouping
+  projectLabelGroupColumns {
+    ...ViewPreferencesProjectLabelGroupColumn
+  }
+  projectLayout
+  projectViewOrdering
+  projectSubGrouping
+  releasePipelinesViewOrdering
+  reviewGrouping
+  reviewViewOrdering
+  searchResultType
+  searchViewOrdering
+  teamViewOrdering
+  triageViewOrdering
+  workspaceMembersViewOrdering
+  projectZoomLevel
+  timelineZoomScale
+  showCompletedAgentSessions
   showCompletedIssues
+  showCompletedProjects
+  showCompletedReviews
+  closedIssuesOrderedByRecency
+  showArchivedItems
+  customerPageNeedsShowCompletedIssuesAndProjects
+  projectCustomerNeedsShowCompletedIssuesLast
+  showDraftReviews
+  showEmptyGroupsBoard
+  showEmptyGroupsList
+  showEmptyGroups
+  showEmptySubGroupsBoard
+  showEmptySubGroupsList
+  showEmptySubGroups
+  customerPageNeedsShowImportantFirst
+  embeddedCustomerNeedsShowImportantFirst
+  projectCustomerNeedsShowImportantFirst
+  showParents
+  fieldPreviewLinks
+  showReadItems
+  showSnoozedItems
+  showSubInitiativeProjects
+  showNestedInitiatives
+  showSubIssues
+  showSubTeamIssues
+  showSubTeamProjects
+  showSupervisedIssues
+  fieldSla
+  fieldSentryIssues
+  customViewFieldDateCreated
+  customViewFieldOwner
+  customViewFieldDateUpdated
+  customViewFieldVisibility
+  customerFieldDomains
+  customerFieldOwner
+  customerFieldRequestCount
+  fieldCustomerCount
+  customerFieldRevenue
+  fieldCustomerRevenue
+  customerFieldSize
+  customerFieldSource
+  customerFieldStatus
+  customerFieldTier
+  fieldCycle
+  dashboardFieldDateCreated
+  dashboardFieldOwner
+  dashboardFieldDateUpdated
+  fieldDueDate
+  initiativeFieldHealth
+  initiativeFieldActivity
+  initiativeFieldDescription
+  initiativeFieldInitiativeHealth
+  initiativeFieldOwner
+  initiativeFieldProjects
+  initiativeFieldTargetDate
+  initiativeFieldTeams
+  fieldDateArchived
+  fieldAssignee
+  fieldDateCreated
+  customerPageNeedsFieldIssueTargetDueDate
+  fieldEstimate
+  customerPageNeedsFieldIssueIdentifier
+  fieldId
+  fieldDateMyActivity
+  customerPageNeedsFieldIssuePriority
+  fieldPriority
+  customerPageNeedsFieldIssueStatus
+  fieldStatus
+  fieldDateUpdated
+  fieldLabels
+  fieldLinkCount
+  memberFieldJoined
+  memberFieldStatus
+  memberFieldTeams
+  fieldMilestone
+  projectFieldActivity
+  projectFieldDateCompleted
+  projectFieldDateCreated
+  projectFieldCustomerCount
+  projectFieldCustomerRevenue
+  projectFieldDescriptionBoard
+  projectFieldDescription
+  fieldProject
+  projectFieldHealthTimeline
+  projectFieldHealth
+  projectFieldInitiatives
+  projectFieldLabels
+  projectFieldLeadTimeline
+  projectFieldLead
+  projectFieldMembersBoard
+  projectFieldMembersList
+  projectFieldMembersTimeline
+  projectFieldMembers
+  projectFieldMilestoneTimeline
+  projectFieldMilestone
+  projectFieldPredictionsTimeline
+  projectFieldPredictions
+  projectFieldPriority
+  projectFieldRelationsTimeline
+  projectFieldRelations
+  projectFieldRoadmapsBoard
+  projectFieldRoadmapsList
+  projectFieldRoadmapsTimeline
+  projectFieldRoadmaps
+  projectFieldRolloutStage
+  projectFieldStartDate
+  projectFieldStatusTimeline
+  projectFieldStatus
+  projectFieldTargetDate
+  projectFieldTeamsBoard
+  projectFieldTeamsList
+  projectFieldTeamsTimeline
+  projectFieldTeams
+  projectFieldDateUpdated
+  fieldPullRequests
+  fieldRelease
+  reviewFieldAvatar
+  reviewFieldChecks
+  reviewFieldIdentifier
+  reviewFieldPreviewLinks
+  reviewFieldRepository
+  teamFieldDateCreated
+  teamFieldCycle
+  teamFieldIdentifier
+  teamFieldMembers
+  teamFieldMembership
+  teamFieldOwner
+  teamFieldProjects
+  teamFieldDateUpdated
+  fieldTimeInCurrentStatus
+  showTriageIssues
+  showUnreadItemsFirst
+  timelineChronologyShowWeekNumbers
 }`) as unknown as TypedDocumentString<UpdateViewPreferencesMutation, UpdateViewPreferencesMutationVariables>;
 export const CreateWebhookDocument = new TypedDocumentString(`
     mutation createWebhook($input: WebhookCreateInput!) {
