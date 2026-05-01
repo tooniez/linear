@@ -30046,15 +30046,21 @@ export class IntegrationGitlabConnectMutation extends Request {
    *
    * @param accessToken - required accessToken to pass to integrationGitlabConnect
    * @param gitlabUrl - required gitlabUrl to pass to integrationGitlabConnect
+   * @param variables - variables without 'accessToken', 'gitlabUrl' to pass into the IntegrationGitlabConnectMutation
    * @returns parsed response from IntegrationGitlabConnectMutation
    */
-  public async fetch(accessToken: string, gitlabUrl: string): LinearFetch<GitLabIntegrationCreatePayload> {
+  public async fetch(
+    accessToken: string,
+    gitlabUrl: string,
+    variables?: Omit<L.IntegrationGitlabConnectMutationVariables, "accessToken" | "gitlabUrl">
+  ): LinearFetch<GitLabIntegrationCreatePayload> {
     const response = await this._request<
       L.IntegrationGitlabConnectMutation,
       L.IntegrationGitlabConnectMutationVariables
     >(L.IntegrationGitlabConnectDocument.toString(), {
       accessToken,
       gitlabUrl,
+      ...variables,
     });
     const data = response.integrationGitlabConnect;
 
@@ -45075,10 +45081,15 @@ export class LinearSdk extends Request {
    *
    * @param accessToken - required accessToken to pass to integrationGitlabConnect
    * @param gitlabUrl - required gitlabUrl to pass to integrationGitlabConnect
+   * @param variables - variables without 'accessToken', 'gitlabUrl' to pass into the IntegrationGitlabConnectMutation
    * @returns GitLabIntegrationCreatePayload
    */
-  public integrationGitlabConnect(accessToken: string, gitlabUrl: string): LinearFetch<GitLabIntegrationCreatePayload> {
-    return new IntegrationGitlabConnectMutation(this._request).fetch(accessToken, gitlabUrl);
+  public integrationGitlabConnect(
+    accessToken: string,
+    gitlabUrl: string,
+    variables?: Omit<L.IntegrationGitlabConnectMutationVariables, "accessToken" | "gitlabUrl">
+  ): LinearFetch<GitLabIntegrationCreatePayload> {
+    return new IntegrationGitlabConnectMutation(this._request).fetch(accessToken, gitlabUrl, variables);
   }
   /**
    * Tests connectivity to a self-hosted GitLab instance and clears auth errors if successful.

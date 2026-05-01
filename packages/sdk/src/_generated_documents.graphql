@@ -19871,10 +19871,22 @@ mutation integrationGithubRemoveCodeAccess(
 mutation integrationGitlabConnect(
   # The GitLab Access Token to connect with.
   $accessToken: String!
+  # ISO timestamp when the access token expires. Used as a fallback when `validationProjectPath` is set and `personal_access_tokens/self` is unreachable.
+  $expiresAt: String
   # The URL of the GitLab installation.
   $gitlabUrl: String!
+  # Whether the access token is limited to a read-only scope. Used as a fallback when `validationProjectPath` is set and `personal_access_tokens/self` is unreachable.
+  $readonly: Boolean
+  # Optional path or numeric ID of a project to use for the setup health check. Set this when the GitLab tenant blocks non-project API endpoints.
+  $validationProjectPath: String
 ) {
-  integrationGitlabConnect(accessToken: $accessToken, gitlabUrl: $gitlabUrl) {
+  integrationGitlabConnect(
+    accessToken: $accessToken
+    expiresAt: $expiresAt
+    gitlabUrl: $gitlabUrl
+    readonly: $readonly
+    validationProjectPath: $validationProjectPath
+  ) {
     ...GitLabIntegrationCreatePayload
   }
 }

@@ -6625,6 +6625,8 @@ export type GitLabSettingsInput = {
   readonly?: InputMaybe<Scalars["Boolean"]>;
   /** The self-hosted URL of the GitLab instance. */
   url?: InputMaybe<Scalars["String"]>;
+  /** Path or numeric ID of a project to use for the setup health check. Set this when the GitLab tenant blocks non-project API endpoints; the setup check then validates against this single project instead of the personal access token endpoint. */
+  validationProjectPath?: InputMaybe<Scalars["String"]>;
 };
 
 export type GitLabTestConnectionPayload = {
@@ -12869,7 +12871,10 @@ export type MutationIntegrationGithubRemoveCodeAccessArgs = {
 
 export type MutationIntegrationGitlabConnectArgs = {
   accessToken: Scalars["String"];
+  expiresAt?: InputMaybe<Scalars["String"]>;
   gitlabUrl: Scalars["String"];
+  readonly?: InputMaybe<Scalars["Boolean"]>;
+  validationProjectPath?: InputMaybe<Scalars["String"]>;
 };
 
 export type MutationIntegrationGitlabTestConnectionArgs = {
@@ -23165,6 +23170,8 @@ export type TeamUpdateInput = {
   requirePriorityToLeaveTriage?: InputMaybe<Scalars["Boolean"]>;
   /** When the team was retired. */
   retiredAt?: InputMaybe<Scalars["DateTime"]>;
+  /** The SCIM group name for the team. */
+  scimGroupName?: InputMaybe<Scalars["String"]>;
   /** Whether the team is managed by SCIM integration. Mutation restricted to workspace admins or owners and only unsetting is allowed! */
   scimManaged?: InputMaybe<Scalars["Boolean"]>;
   /** The security settings for the team. */
@@ -65407,7 +65414,10 @@ export type IntegrationGithubRemoveCodeAccessMutation = { __typename?: "Mutation
 
 export type IntegrationGitlabConnectMutationVariables = Exact<{
   accessToken: Scalars["String"];
+  expiresAt?: InputMaybe<Scalars["String"]>;
   gitlabUrl: Scalars["String"];
+  readonly?: InputMaybe<Scalars["Boolean"]>;
+  validationProjectPath?: InputMaybe<Scalars["String"]>;
 }>;
 
 export type IntegrationGitlabConnectMutation = { __typename?: "Mutation" } & {
@@ -122479,8 +122489,14 @@ export const IntegrationGithubRemoveCodeAccessDocument = new TypedDocumentString
   IntegrationGithubRemoveCodeAccessMutationVariables
 >;
 export const IntegrationGitlabConnectDocument = new TypedDocumentString(`
-    mutation integrationGitlabConnect($accessToken: String!, $gitlabUrl: String!) {
-  integrationGitlabConnect(accessToken: $accessToken, gitlabUrl: $gitlabUrl) {
+    mutation integrationGitlabConnect($accessToken: String!, $expiresAt: String, $gitlabUrl: String!, $readonly: Boolean, $validationProjectPath: String) {
+  integrationGitlabConnect(
+    accessToken: $accessToken
+    expiresAt: $expiresAt
+    gitlabUrl: $gitlabUrl
+    readonly: $readonly
+    validationProjectPath: $validationProjectPath
+  ) {
     ...GitLabIntegrationCreatePayload
   }
 }

@@ -11190,6 +11190,10 @@ input GitLabSettingsInput {
   The self-hosted URL of the GitLab instance.
   """
   url: String
+  """
+  Path or numeric ID of a project to use for the setup health check. Set this when the GitLab tenant blocks non-project API endpoints; the setup check then validates against this single project instead of the personal access token endpoint.
+  """
+  validationProjectPath: String
 }
 
 type GitLabTestConnectionPayload {
@@ -21845,9 +21849,21 @@ type Mutation {
     """
     accessToken: String!
     """
+    ISO timestamp when the access token expires. Used as a fallback when `validationProjectPath` is set and `personal_access_tokens/self` is unreachable.
+    """
+    expiresAt: String
+    """
     The URL of the GitLab installation.
     """
     gitlabUrl: String!
+    """
+    Whether the access token is limited to a read-only scope. Used as a fallback when `validationProjectPath` is set and `personal_access_tokens/self` is unreachable.
+    """
+    readonly: Boolean
+    """
+    Optional path or numeric ID of a project to use for the setup health check. Set this when the GitLab tenant blocks non-project API endpoints.
+    """
+    validationProjectPath: String
   ): GitLabIntegrationCreatePayload!
   """
   Tests connectivity to a self-hosted GitLab instance and clears auth errors if successful.
@@ -41706,6 +41722,10 @@ input TeamUpdateInput {
   When the team was retired.
   """
   retiredAt: DateTime
+  """
+  The SCIM group name for the team.
+  """
+  scimGroupName: String
   """
   Whether the team is managed by SCIM integration. Mutation restricted to workspace admins or owners and only unsetting is allowed!
   """
