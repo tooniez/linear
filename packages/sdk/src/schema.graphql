@@ -1642,6 +1642,10 @@ type AiConversationAckPart implements AiConversationBasePart {
   """
   metadata: AiConversationPartMetadata!
   """
+  [Internal] A one-line, third-person summary of the action the agent completed. Null when the agent acknowledged without describing an action.
+  """
+  summary: String
+  """
   The type of the part.
   """
   type: AiConversationPartType!
@@ -9793,6 +9797,10 @@ type DocumentContent implements Node {
   """
   issue: Issue
   """
+  [Internal] The meeting that the content is associated with. Null if the content belongs to a different parent entity type.
+  """
+  meeting: Meeting
+  """
   The project that the content is associated with. Null if the content belongs to a different parent entity type.
   """
   project: Project
@@ -12455,28 +12463,6 @@ enum FeedSummarySchedule {
   daily
   never
   weekly
-}
-
-"""
-The result of a data fetch query using natural language.
-"""
-type FetchDataPayload {
-  """
-  The fetched data as a JSON object. The shape depends on the natural language query and the resolved GraphQL query. Null if the query returned no results.
-  """
-  data: JSONObject
-  """
-  The filter variables that were generated and applied to the GraphQL query. Null if no filters were needed.
-  """
-  filters: JSONObject
-  """
-  The GraphQL query that was generated from the natural language input and executed to produce the data. Useful for debugging or reusing the query directly.
-  """
-  query: String
-  """
-  Whether the fetch operation was successful.
-  """
-  success: Boolean!
 }
 
 type FileUploadDeletePayload {
@@ -22644,6 +22630,69 @@ input McpServerCustomHeaderInput {
   value: String!
 }
 
+"""
+[Internal] A meeting attached to one project or initiative. Its transcript is stored in related document content.
+"""
+type Meeting implements Node {
+  """
+  [Internal] The transcript analysis state: `pending` while analysis runs and `completed` after it finishes. Null before analysis starts.
+  """
+  analysisStatus: MeetingAnalysisStatus
+  """
+  The time at which the entity was archived. Null if the entity has not been archived.
+  """
+  archivedAt: DateTime
+  """
+  [Internal] The meeting attendees. Each entry has a name and may include an active workspace user identifier.
+  """
+  attendees: [JSONObject!]
+  """
+  [Internal] The source that owns the attendee list. Null when attendees have not been set.
+  """
+  attendeesSource: String
+  """
+  The time at which the entity was created.
+  """
+  createdAt: DateTime!
+  """
+  [Internal] The user who created the meeting. Null if the user was deleted.
+  """
+  creator: User
+  """
+  [Internal] The date when the meeting occurred. Null when clients should use the creation date.
+  """
+  date: TimelessDate
+  """
+  The unique identifier of the entity.
+  """
+  id: ID!
+  """
+  [Internal] The initiative that contains the meeting. Null when the meeting belongs to a project.
+  """
+  initiative: Initiative
+  """
+  [Internal] The project that contains the meeting. Null when the meeting belongs to an initiative.
+  """
+  project: Project
+  """
+  [Internal] The analysis-derived meeting summary. Null before analysis produces a summary.
+  """
+  summary: String
+  """
+  The last time at which the entity was meaningfully updated. This is the same as the creation time if the entity hasn't
+      been updated after creation.
+  """
+  updatedAt: DateTime!
+}
+
+"""
+[Internal] The analysis state of a meeting transcript.
+"""
+enum MeetingAnalysisStatus {
+  completed
+  pending
+}
+
 type MicrosoftTeamsChannel {
   """
   The display name of the channel.
@@ -28039,6 +28088,7 @@ enum NotificationSubscriptionType {
   pullRequest
   team
   user
+  workflowDefinition
 }
 
 """
@@ -32732,7 +32782,7 @@ type Project implements Node {
   """
   id: ID!
   """
-  [Internal] The human-readable identifier of the project. Returns the custom identifier override when set, otherwise the workspace default `<prefix>-<number>`. Null for legacy projects that have not been backfilled.
+  [Internal] The human-readable identifier of the project. Returns the custom identifier override when set, otherwise the default `P-<leadTeamKey>-<number>`. Null for projects without a lead team and for legacy projects that have not been backfilled.
   """
   identifier: String
   """
@@ -35468,7 +35518,7 @@ type ProjectSearchResult implements Node {
   """
   id: ID!
   """
-  [Internal] The human-readable identifier of the project. Returns the custom identifier override when set, otherwise the workspace default `<prefix>-<number>`. Null for legacy projects that have not been backfilled.
+  [Internal] The human-readable identifier of the project. Returns the custom identifier override when set, otherwise the default `P-<leadTeamKey>-<number>`. Null for projects without a lead team and for legacy projects that have not been backfilled.
   """
   identifier: String
   """
@@ -38597,19 +38647,6 @@ type Query {
     orderBy: PaginationOrderBy
   ): FavoriteConnection!
   """
-  [Internal] Fetch an arbitrary set of data using natural language query. Be specific about what you want including properties for each entity, sort order, filters, limit and properties.
-  """
-  fetchData(
-    """
-    Natural language query describing what data to fetch.
-
-        Examples:
-        - "All issues for the project with id 12345678-1234-1234-1234-123456789abc including comments"
-        - "The latest project update for each project that's a part of the initiative with id 12345678-1234-1234-1234-123456789abc, including it's sub-initiatives"
-    """
-    query: String!
-  ): FetchDataPayload!
-  """
   Returns a single initiative by its identifier or URL slug.
   """
   initiative(id: String!): Initiative!
@@ -40346,6 +40383,48 @@ type Query {
     """
     id: String!
   ): TriageResponsibility!
+  """
+  One usage-based billing alert, by its identifier.
+  """
+  usageAlert(
+    """
+    The identifier of the usage alert to retrieve.
+    """
+    id: String!
+  ): UsageAlert!
+  """
+  The workspace's usage-based billing alerts, such as a low or exhausted usage credit balance. Alerts for expired promotional credits are archived and excluded unless archived resources are requested. Use resolvedAt to tell an open alert from one whose condition has since cleared.
+  """
+  usageAlerts(
+    """
+    A cursor to be used with first for forward pagination
+    """
+    after: String
+    """
+    A cursor to be used with last for backward pagination.
+    """
+    before: String
+    """
+    Filter returned usage alerts.
+    """
+    filter: UsageAlertFilter
+    """
+    The number of items to forward paginate (used with after). Defaults to 50.
+    """
+    first: Int
+    """
+    Should archived resources be included (default: false)
+    """
+    includeArchived: Boolean
+    """
+    The number of items to backward paginate (used with before). Defaults to 50.
+    """
+    last: Int
+    """
+    By which field should the pagination order by. Available options are createdAt (default) and updatedAt.
+    """
+    orderBy: PaginationOrderBy
+  ): UsageAlertConnection!
   """
   Fetches a specific user by their ID.
   """
@@ -43970,6 +44049,10 @@ input SlackSettingsInput {
   """
   enableLinearAgentWorkflowAccess: Boolean
   """
+  Whether Loops may read and send messages through this Slack integration.
+  """
+  enableLoops: Boolean
+  """
   Enterprise id of the connected Slack enterprise
   """
   enterpriseId: String
@@ -47241,7 +47324,7 @@ type UsageAlert implements Node {
   """
   id: ID!
   """
-  Type-specific metadata captured when the alert was triggered.
+  Type-specific snapshot captured when the alert was triggered, keyed by the alert type — for example the credit balance and threshold for a lowBalance alert. A resolution entry is added once new usage credits have landed and cleared the alert's condition.
   """
   metadata: JSONObject!
   """
@@ -47257,6 +47340,50 @@ type UsageAlert implements Node {
       been updated after creation.
   """
   updatedAt: DateTime!
+}
+
+type UsageAlertConnection {
+  edges: [UsageAlertEdge!]!
+  nodes: [UsageAlert!]!
+  pageInfo: PageInfo!
+}
+
+type UsageAlertEdge {
+  """
+  Used in `before` and `after` args
+  """
+  cursor: String!
+  node: UsageAlert!
+}
+
+"""
+Usage alert filtering options.
+"""
+input UsageAlertFilter {
+  """
+  Compound filters, all of which need to be matched by the alert.
+  """
+  and: [UsageAlertFilter!]
+  """
+  Comparator for the created at date.
+  """
+  createdAt: DateComparator
+  """
+  Comparator for the identifier.
+  """
+  id: IDComparator
+  """
+  Compound filters, one of which need to be matched by the alert.
+  """
+  or: [UsageAlertFilter!]
+  """
+  Comparator for the condition the alert was triggered by.
+  """
+  type: UsageAlertTypeComparator
+  """
+  Comparator for the updated at date.
+  """
+  updatedAt: DateComparator
 }
 
 """
@@ -47380,6 +47507,46 @@ type UsageAlertNotification implements Entity & Node & Notification {
   The recipient user of this notification.
   """
   user: User!
+}
+
+"""
+The condition a usage alert was triggered by.
+"""
+enum UsageAlertType {
+  """
+  Usage credits ran out.
+  """
+  exhausted
+  """
+  A promotional usage credit grant is nearing its expiration.
+  """
+  expiringPromoCredit
+  """
+  Prepaid usage credits crossed below the low-balance threshold.
+  """
+  lowBalance
+}
+
+"""
+Comparator for the condition a usage alert was triggered by.
+"""
+input UsageAlertTypeComparator {
+  """
+  Equals constraint.
+  """
+  eq: UsageAlertType
+  """
+  In-array constraint.
+  """
+  in: [UsageAlertType!]
+  """
+  Not-equals constraint.
+  """
+  neq: UsageAlertType
+  """
+  Not-in-array constraint.
+  """
+  nin: [UsageAlertType!]
 }
 
 """

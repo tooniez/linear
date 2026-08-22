@@ -1926,7 +1926,7 @@ fragment UsageAlertNotification on UsageAlertNotification {
   id
   # The usage alert related to the notification.
   usageAlert {
-    ...UsageAlert
+    id
   }
   # The user that caused the notification. Null if the notification was triggered by a non-user actor such as an integration, external user, or system event.
   actor {
@@ -4581,7 +4581,7 @@ fragment UsageAlert on UsageAlert {
   resolvedAt
   # The unique identifier of the entity.
   id
-  # Type-specific metadata captured when the alert was triggered.
+  # Type-specific snapshot captured when the alert was triggered, keyed by the alert type — for example the credit balance and threshold for a lowBalance alert. A resolution entry is added once new usage credits have landed and cleared the alert's condition.
   metadata
 }
 
@@ -10076,19 +10076,6 @@ fragment CustomViewSuggestionPayload on CustomViewSuggestionPayload {
   name
 }
 
-# The result of a data fetch query using natural language.
-fragment FetchDataPayload on FetchDataPayload {
-  __typename
-  # The GraphQL query that was generated from the natural language input and executed to produce the data. Useful for debugging or reusing the query directly.
-  query
-  # The fetched data as a JSON object. The shape depends on the natural language query and the resolved GraphQL query. Null if the query returned no results.
-  data
-  # The filter variables that were generated and applied to the GraphQL query. Null if no filters were needed.
-  filters
-  # Whether the fetch operation was successful.
-  success
-}
-
 # The result of a document mutation.
 fragment DocumentPayload on DocumentPayload {
   __typename
@@ -14104,6 +14091,16 @@ fragment UploadPayload on UploadPayload {
   }
   # Whether the operation was successful.
   success
+}
+
+fragment UsageAlertConnection on UsageAlertConnection {
+  __typename
+  nodes {
+    ...UsageAlert
+  }
+  pageInfo {
+    ...PageInfo
+  }
 }
 
 fragment UserConnection on UserConnection {
@@ -20432,6 +20429,46 @@ query triageResponsibility_manualSelection(
     manualSelection {
       ...TriageResponsibilityManualSelection
     }
+  }
+}
+# One usage-based billing alert, by its identifier.
+query usageAlert(
+  # The identifier of the usage alert to retrieve.
+  $id: String!
+) {
+  usageAlert(id: $id) {
+    ...UsageAlert
+  }
+}
+# The workspace's usage-based billing alerts, such as a low or exhausted usage credit balance. Alerts
+# for expired promotional credits are archived and excluded unless archived resources are requested.
+# Use resolvedAt to tell an open alert from one whose condition has since cleared.
+query usageAlerts(
+  # A cursor to be used with first for forward pagination
+  $after: String
+  # A cursor to be used with last for backward pagination.
+  $before: String
+  # Filter returned usage alerts.
+  $filter: UsageAlertFilter
+  # The number of items to forward paginate (used with after). Defaults to 50.
+  $first: Int
+  # Should archived resources be included (default: false)
+  $includeArchived: Boolean
+  # The number of items to backward paginate (used with before). Defaults to 50.
+  $last: Int
+  # By which field should the pagination order by. Available options are createdAt (default) and updatedAt.
+  $orderBy: PaginationOrderBy
+) {
+  usageAlerts(
+    after: $after
+    before: $before
+    filter: $filter
+    first: $first
+    includeArchived: $includeArchived
+    last: $last
+    orderBy: $orderBy
+  ) {
+    ...UsageAlertConnection
   }
 }
 # Fetches a specific user by their ID.

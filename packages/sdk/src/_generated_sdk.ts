@@ -9105,30 +9105,6 @@ export class FavoritePayload extends Request {
   }
 }
 /**
- * The result of a data fetch query using natural language.
- *
- * @param request - function to call the graphql client
- * @param data - L.FetchDataPayloadFragment response data
- */
-export class FetchDataPayload extends Request {
-  public constructor(request: LinearRequest, data: L.FetchDataPayloadFragment) {
-    super(request);
-    this.data = data.data ?? undefined;
-    this.filters = data.filters ?? undefined;
-    this.query = data.query ?? undefined;
-    this.success = data.success;
-  }
-
-  /** The fetched data as a JSON object. The shape depends on the natural language query and the resolved GraphQL query. Null if the query returned no results. */
-  public data?: L.Scalars["JSONObject"] | null;
-  /** The filter variables that were generated and applied to the GraphQL query. Null if no filters were needed. */
-  public filters?: L.Scalars["JSONObject"] | null;
-  /** The GraphQL query that was generated from the natural language input and executed to produce the data. Useful for debugging or reusing the query directly. */
-  public query?: string | null;
-  /** Whether the fetch operation was successful. */
-  public success: boolean;
-}
-/**
  * FileUploadDeletePayload model
  *
  * @param request - function to call the graphql client
@@ -23463,7 +23439,7 @@ export class UsageAlert extends Request {
   public createdAt: Date;
   /** The unique identifier of the entity. */
   public id: string;
-  /** Type-specific metadata captured when the alert was triggered. */
+  /** Type-specific snapshot captured when the alert was triggered, keyed by the alert type — for example the credit balance and threshold for a lowBalance alert. A resolution entry is added once new usage credits have landed and cleared the alert's condition. */
   public metadata: L.Scalars["JSONObject"];
   /** The time when the usage alert was resolved or archived. Null if the alert is still active. */
   public resolvedAt?: Date | null;
@@ -23476,6 +23452,27 @@ export class UsageAlert extends Request {
   public updatedAt: Date;
 }
 /**
+ * UsageAlertConnection model
+ *
+ * @param request - function to call the graphql client
+ * @param fetch - function to trigger a refetch of this UsageAlertConnection model
+ * @param data - UsageAlertConnection response data
+ */
+export class UsageAlertConnection extends Connection<UsageAlert> {
+  public constructor(
+    request: LinearRequest,
+    fetch: (connection?: LinearConnectionVariables) => LinearFetch<LinearConnection<UsageAlert> | undefined>,
+    data: L.UsageAlertConnectionFragment
+  ) {
+    super(
+      request,
+      fetch,
+      data.nodes.map(node => new UsageAlert(request, node)),
+      new PageInfo(request, data.pageInfo)
+    );
+  }
+}
+/**
  * A notification related to a usage alert, sent to workspace billing admins.
  *
  * @param request - function to call the graphql client
@@ -23484,6 +23481,7 @@ export class UsageAlert extends Request {
 export class UsageAlertNotification extends Request {
   private _actor?: L.UsageAlertNotificationFragment["actor"];
   private _externalUserActor?: L.UsageAlertNotificationFragment["externalUserActor"];
+  private _usageAlert: L.UsageAlertNotificationFragment["usageAlert"];
   private _user: L.UsageAlertNotificationFragment["user"];
 
   public constructor(request: LinearRequest, data: L.UsageAlertNotificationFragment) {
@@ -23499,10 +23497,10 @@ export class UsageAlertNotification extends Request {
     this.updatedAt = parseDate(data.updatedAt) ?? new Date();
     this.usageAlertId = data.usageAlertId;
     this.botActor = data.botActor ? new ActorBot(request, data.botActor) : undefined;
-    this.usageAlert = new UsageAlert(request, data.usageAlert);
     this.category = data.category;
     this._actor = data.actor ?? undefined;
     this._externalUserActor = data.externalUserActor ?? undefined;
+    this._usageAlert = data.usageAlert;
     this._user = data.user;
   }
 
@@ -23531,8 +23529,6 @@ export class UsageAlertNotification extends Request {
   public usageAlertId: string;
   /** The bot that caused the notification. */
   public botActor?: ActorBot | null;
-  /** The usage alert related to the notification. */
-  public usageAlert: UsageAlert;
   /** The category of the notification. */
   public category: L.NotificationCategory;
   /** The user that caused the notification. Null if the notification was triggered by a non-user actor such as an integration, external user, or system event. */
@@ -23552,6 +23548,10 @@ export class UsageAlertNotification extends Request {
   /** The ID of external user that caused the notification. populated when the notification was triggered by an external user (e.g., a commenter from a connected integration like slack or github) rather than a linear workspace member. */
   public get externalUserActorId(): string | undefined {
     return this._externalUserActor?.id;
+  }
+  /** The usage alert related to the notification. */
+  public get usageAlert(): LinearFetch<UsageAlert> | undefined {
+    return new UsageAlertQuery(this._request).fetch(this._usageAlert.id);
   }
   /** The recipient user of this notification. */
   public get user(): LinearFetch<User> | undefined {
@@ -30338,6 +30338,72 @@ export class TriageResponsibilityQuery extends Request {
     const data = response.triageResponsibility;
 
     return new TriageResponsibility(this._request, data);
+  }
+}
+
+/**
+ * A fetchable UsageAlert Query
+ *
+ * @param request - function to call the graphql client
+ */
+export class UsageAlertQuery extends Request {
+  public constructor(request: LinearRequest) {
+    super(request);
+  }
+
+  /**
+   * Call the UsageAlert query and return a UsageAlert
+   *
+   * @param id - required id to pass to usageAlert
+   * @returns parsed response from UsageAlertQuery
+   */
+  public async fetch(id: string): LinearFetch<UsageAlert> {
+    const response = await this._request<L.UsageAlertQuery, L.UsageAlertQueryVariables>(
+      L.UsageAlertDocument.toString(),
+      {
+        id,
+      }
+    );
+    const data = response.usageAlert;
+
+    return new UsageAlert(this._request, data);
+  }
+}
+
+/**
+ * A fetchable UsageAlerts Query
+ *
+ * @param request - function to call the graphql client
+ */
+export class UsageAlertsQuery extends Request {
+  public constructor(request: LinearRequest) {
+    super(request);
+  }
+
+  /**
+   * Call the UsageAlerts query and return a UsageAlertConnection
+   *
+   * @param variables - variables to pass into the UsageAlertsQuery
+   * @returns parsed response from UsageAlertsQuery
+   */
+  public async fetch(variables?: L.UsageAlertsQueryVariables): LinearFetch<UsageAlertConnection> {
+    const response = await this._request<L.UsageAlertsQuery, L.UsageAlertsQueryVariables>(
+      L.UsageAlertsDocument.toString(),
+      variables
+    );
+    const data = response.usageAlerts;
+
+    return new UsageAlertConnection(
+      this._request,
+      connection =>
+        this.fetch(
+          defaultConnection({
+            ...variables,
+            ...connection,
+          })
+        ),
+      data
+    );
   }
 }
 
@@ -50247,6 +50313,24 @@ export class LinearSdk extends Request {
     return new TriageResponsibilityQuery(this._request).fetch(id);
   }
   /**
+   * One usage-based billing alert, by its identifier.
+   *
+   * @param id - required id to pass to usageAlert
+   * @returns UsageAlert
+   */
+  public usageAlert(id: string): LinearFetch<UsageAlert> {
+    return new UsageAlertQuery(this._request).fetch(id);
+  }
+  /**
+   * The workspace's usage-based billing alerts, such as a low or exhausted usage credit balance. Alerts for expired promotional credits are archived and excluded unless archived resources are requested. Use resolvedAt to tell an open alert from one whose condition has since cleared.
+   *
+   * @param variables - variables to pass into the UsageAlertsQuery
+   * @returns UsageAlertConnection
+   */
+  public usageAlerts(variables?: L.UsageAlertsQueryVariables): LinearFetch<UsageAlertConnection> {
+    return new UsageAlertsQuery(this._request).fetch(variables);
+  }
+  /**
    * Fetches a specific user by their ID.
    *
    * @param id - required id to pass to user
@@ -53799,6 +53883,7 @@ export {
   IssueSuggestionType,
   LinearAgentMcpServersMode,
   LinearAgentTrustedSourcesMode,
+  MeetingAnalysisStatus,
   NotificationCategory,
   NotificationChannel,
   NotificationSubscriptionType,
@@ -53842,6 +53927,7 @@ export {
   TeamVisibility,
   TriageResponsibilityAction,
   TriageRuleErrorType,
+  UsageAlertType,
   UserContextViewType,
   UserFlagType,
   UserFlagUpdateOperation,
