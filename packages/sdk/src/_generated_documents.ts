@@ -21699,6 +21699,8 @@ export type Query = {
   agentSession: AgentSession;
   /** [Internal] Retrieves coding agent sandbox details for a given agent session ID. */
   agentSessionSandbox?: Maybe<CodingAgentSandboxPayload>;
+  /** [Internal] SSH address of the current user's running coding sandbox for this agent session. */
+  agentSessionSshAddress?: Maybe<Scalars["String"]>;
   /** All agent sessions. */
   agentSessions: AgentSessionConnection;
   /** A specific agent skill. */
@@ -22082,6 +22084,10 @@ export type QueryAgentSessionArgs = {
 };
 
 export type QueryAgentSessionSandboxArgs = {
+  agentSessionId: Scalars["String"];
+};
+
+export type QueryAgentSessionSshAddressArgs = {
   agentSessionId: Scalars["String"];
 };
 

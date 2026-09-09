@@ -1,5 +1,12 @@
 # Change Log
 
+## 3.2.13
+
+### Patch Changes
+
+- Updated dependencies
+  - @linear/sdk@94.0.1
+
 ## 3.2.12
 
 ### Patch Changes

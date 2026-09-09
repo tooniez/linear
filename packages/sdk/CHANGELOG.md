@@ -1,5 +1,11 @@
 # Change Log
 
+## 94.0.1
+
+### Patch Changes
+
+- feat(schema): [non_breaking] Field 'agentSessionSshAddress' was added to object type 'Query' (Query.agentSessionSshAddress)
+
 ## 94.0.0
 
 ### Major Changes

@@ -38445,6 +38445,15 @@ type Query {
     agentSessionId: String!
   ): CodingAgentSandboxPayload
   """
+  [Internal] SSH address of the current user's running coding sandbox for this agent session.
+  """
+  agentSessionSshAddress(
+    """
+    The identifier of the agent session.
+    """
+    agentSessionId: String!
+  ): String
+  """
   All agent sessions.
   """
   agentSessions(
