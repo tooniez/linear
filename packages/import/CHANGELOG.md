@@ -1,5 +1,12 @@
 # Change Log
 
+## 4.0.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @linear/sdk@97.1.0
+
 ## 4.0.0
 
 ### Major Changes

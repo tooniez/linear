@@ -6215,6 +6215,8 @@ export type Document = Node & {
   lastAppliedTemplate?: Maybe<Template>;
   /** The owner of the document. Null if no owner is assigned or the owner's account has been deleted. */
   owner?: Maybe<User>;
+  /** [Internal] The parent document. Null if the document is not a sub-document. */
+  parentDocument?: Maybe<Document>;
   /** The project that the document is associated with. Null if the document belongs to a different parent entity type. */
   project?: Maybe<Project>;
   /** The release that the document is associated with. Null if the document belongs to a different parent entity type. */
@@ -6223,6 +6225,8 @@ export type Document = Node & {
   slugId: Scalars["String"];
   /** The sort order of the document in its parent entity's resources list. This order is shared with other resource types such as external links. */
   sortOrder: Scalars["Float"];
+  /** [Internal] The sort order of the sub-document among its siblings. Null if the document is not a sub-document. */
+  subDocumentSortOrder?: Maybe<Scalars["Float"]>;
   /** Users who are subscribed to the document. */
   subscribers: UserConnection;
   /** [Internal] A one-sentence AI-generated summary of the document content. Null if no summary has been generated. */
@@ -6495,6 +6499,8 @@ export type DocumentCreateInput = {
   lastAppliedTemplateId?: InputMaybe<Scalars["String"]>;
   /** The owner of the document. Set to null to create a document without an owner. */
   ownerId?: InputMaybe<Scalars["String"]>;
+  /** [Internal] The parent document of the sub-document. The container of the document must match the container of the parent document. */
+  parentDocumentId?: InputMaybe<Scalars["String"]>;
   /** Related project for the document. Can be a UUID or project identifier (e.g., 'P-LIN-123'). */
   projectId?: InputMaybe<Scalars["String"]>;
   /** Related release for the document. */
@@ -6503,6 +6509,8 @@ export type DocumentCreateInput = {
   resourceFolderId?: InputMaybe<Scalars["String"]>;
   /** The order of the item in the resources list. */
   sortOrder?: InputMaybe<Scalars["Float"]>;
+  /** [Internal] The sort order of the sub-document among its siblings. Defaults to the last position. Requires `parentDocumentId`. */
+  subDocumentSortOrder?: InputMaybe<Scalars["Float"]>;
   /** [INTERNAL] The identifiers of the users subscribing to this document. */
   subscriberIds?: InputMaybe<Array<Scalars["String"]>>;
   /** [Internal] Related team for the document. */
@@ -6710,6 +6718,8 @@ export type DocumentSearchResult = Node & {
   metadata: Scalars["JSONObject"];
   /** The owner of the document. Null if no owner is assigned or the owner's account has been deleted. */
   owner?: Maybe<User>;
+  /** [Internal] The parent document. Null if the document is not a sub-document. */
+  parentDocument?: Maybe<Document>;
   /** The project that the document is associated with. Null if the document belongs to a different parent entity type. */
   project?: Maybe<Project>;
   /** The release that the document is associated with. Null if the document belongs to a different parent entity type. */
@@ -6718,6 +6728,8 @@ export type DocumentSearchResult = Node & {
   slugId: Scalars["String"];
   /** The sort order of the document in its parent entity's resources list. This order is shared with other resource types such as external links. */
   sortOrder: Scalars["Float"];
+  /** [Internal] The sort order of the sub-document among its siblings. Null if the document is not a sub-document. */
+  subDocumentSortOrder?: Maybe<Scalars["Float"]>;
   /** Users who are subscribed to the document. */
   subscribers: UserConnection;
   /** [Internal] A one-sentence AI-generated summary of the document content. Null if no summary has been generated. */
@@ -6809,6 +6821,8 @@ export type DocumentUpdateInput = {
   lastAppliedTemplateId?: InputMaybe<Scalars["String"]>;
   /** The owner of the document. Set to null to clear. */
   ownerId?: InputMaybe<Scalars["String"]>;
+  /** [Internal] The parent document of the sub-document. The document and its sub-documents move to the container of the parent document. Set to null to make the document a top-level document in its container. */
+  parentDocumentId?: InputMaybe<Scalars["String"]>;
   /** Related project for the document. Can be a UUID or project identifier (e.g., 'P-LIN-123'). */
   projectId?: InputMaybe<Scalars["String"]>;
   /** Related release for the document. */
@@ -6817,6 +6831,8 @@ export type DocumentUpdateInput = {
   resourceFolderId?: InputMaybe<Scalars["String"]>;
   /** The order of the item in the resources list. */
   sortOrder?: InputMaybe<Scalars["Float"]>;
+  /** [Internal] The sort order of the sub-document among its siblings. */
+  subDocumentSortOrder?: InputMaybe<Scalars["Float"]>;
   /** [INTERNAL] The identifiers of the users subscribing to this document. */
   subscriberIds?: InputMaybe<Array<Scalars["String"]>>;
   /** [Internal] Related team for the document. */
@@ -13974,6 +13990,10 @@ export type Mutation = {
   integrationOpsgenieConnect: IntegrationPayload;
   /** [INTERNAL] Refresh Opsgenie schedule mappings. */
   integrationOpsgenieRefreshScheduleMappings: IntegrationPayload;
+  /** [Internal] Completes the Origin app installation so the workspace receives Origin webhooks. */
+  integrationOriginConnect: IntegrationPayload;
+  /** [Internal] Connects an Origin installation that started on Origin, after the workspace admin who installed it confirms. */
+  integrationOriginConnectInstallation: IntegrationPayload;
   /** [INTERNAL] Integrates the workspace with PagerDuty. */
   integrationPagerDutyConnect: IntegrationPayload;
   /** [INTERNAL] Refresh PagerDuty schedule mappings. */
@@ -14183,6 +14203,8 @@ export type Mutation = {
   organizationStartTrialForPlan: OrganizationStartTrialPayload;
   /** Updates the user's workspace settings. Different settings require different permission levels; most require the workspaceSettings admin permission. */
   organizationUpdate: OrganizationPayload;
+  /** [Internal] Removes Linear's app from an Origin installation that started on Origin and that no workspace connected. */
+  originInstallationCancel: OriginInstallationCancelPayload;
   /** [INTERNAL] Submits a Startup Program partner application from the website, creating a triage issue for the startup team. */
   partnerApplicationCreate: ContactPayload;
   /** [Internal] Redeems a partner-offer token for one of the viewer's existing workspaces, recording a pending redemption that is applied when the workspace subscribes. Requires an admin or owner role in the workspace. */
@@ -14801,6 +14823,7 @@ export type MutationDocumentCreateArgs = {
 
 export type MutationDocumentDeleteArgs = {
   id: Scalars["String"];
+  ifParentDocumentId?: InputMaybe<Scalars["String"]>;
 };
 
 export type MutationDocumentUnarchiveArgs = {
@@ -15228,6 +15251,14 @@ export type MutationIntegrationMicrosoftTeamsProjectPostArgs = {
 
 export type MutationIntegrationOpsgenieConnectArgs = {
   apiKey: Scalars["String"];
+};
+
+export type MutationIntegrationOriginConnectArgs = {
+  installationReceipt: Scalars["String"];
+};
+
+export type MutationIntegrationOriginConnectInstallationArgs = {
+  installationId: Scalars["String"];
 };
 
 export type MutationIntegrationPagerDutyConnectArgs = {
@@ -15715,6 +15746,10 @@ export type MutationOrganizationStartTrialForPlanArgs = {
 
 export type MutationOrganizationUpdateArgs = {
   input: OrganizationUpdateInput;
+};
+
+export type MutationOriginInstallationCancelArgs = {
+  installationId: Scalars["String"];
 };
 
 export type MutationPartnerApplicationCreateArgs = {
@@ -18032,6 +18067,8 @@ export type Organization = Node & {
   slackProjectChannelsEnabled: Scalars["Boolean"];
   /** The workspace's subscription to a paid plan. */
   subscription?: Maybe<PaidSubscription>;
+  /** Whether the default prompt for copying an issue or opening it in a coding tool includes a suggested Git branch name. */
+  suggestedBranchNameEnabled: Scalars["Boolean"];
   /** Teams in the workspace. Returns only teams visible to the requesting user (all public teams plus private teams the user is a member of). */
   teams: TeamConnection;
   /** Workspace-level templates (not associated with any specific team). These templates are available across all teams in the workspace. */
@@ -18460,6 +18497,40 @@ export type OrganizationPayload = {
   success: Scalars["Boolean"];
 };
 
+/** A public resource quota for the current workspace. */
+export type OrganizationQuota = Node & {
+  __typename?: "OrganizationQuota";
+  description: Scalars["String"];
+  /** The unique identifier of the entity. */
+  id: Scalars["ID"];
+  /** Stable quota key. */
+  key: Scalars["String"];
+  /** Effective quota limit, including workspace overrides. */
+  limit: Scalars["Float"];
+  name: Scalars["String"];
+};
+
+export type OrganizationQuotaConnection = {
+  __typename?: "OrganizationQuotaConnection";
+  edges: Array<OrganizationQuotaEdge>;
+  nodes: Array<OrganizationQuota>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationQuotaEdge = {
+  __typename?: "OrganizationQuotaEdge";
+  /** Used in `before` and `after` args */
+  cursor: Scalars["String"];
+  node: OrganizationQuota;
+};
+
+/** Filter public workspace quotas by key. */
+export type OrganizationQuotaFilter = {
+  and?: InputMaybe<Array<OrganizationQuotaFilter>>;
+  key?: InputMaybe<StringComparator>;
+  or?: InputMaybe<Array<OrganizationQuotaFilter>>;
+};
+
 /** Input for updating workspace security settings such as role-based access controls. */
 export type OrganizationSecuritySettingsInput = {
   /** The minimum role required to grant or revoke the workspace admin role. */
@@ -18607,12 +18678,40 @@ export type OrganizationUpdateInput = {
   slackProjectChannelPrefix?: InputMaybe<Scalars["String"]>;
   /** [Internal] Whether the Slack project channels feature is enabled for the workspace. */
   slackProjectChannelsEnabled?: InputMaybe<Scalars["Boolean"]>;
+  /** Whether the default prompt for copying an issue or opening it in a coding tool includes a suggested Git branch name. */
+  suggestedBranchNameEnabled?: InputMaybe<Scalars["Boolean"]>;
   /** [ALPHA] Theme settings for the workspace. */
   themeSettings?: InputMaybe<OrganizationThemeSettingsInput>;
   /** The URL key of the workspace. */
   urlKey?: InputMaybe<Scalars["String"]>;
   /** [Internal] The list of working days. Sunday is 0, Monday is 1, etc. */
   workingDays?: InputMaybe<Array<Scalars["Float"]>>;
+};
+
+export type OriginInstallUrlPayload = {
+  __typename?: "OriginInstallUrlPayload";
+  /** The Origin URL to send the user to in order to install Linear's app. */
+  installUrl: Scalars["String"];
+};
+
+export type OriginInstallationCancelPayload = {
+  __typename?: "OriginInstallationCancelPayload";
+  /** Whether Linear's app was removed from the installation. */
+  success: Scalars["Boolean"];
+};
+
+export type OriginInstallationDetails = {
+  __typename?: "OriginInstallationDetails";
+  /** Whether the installation is already connected to the current workspace, as after a reinstall that updated it. */
+  connectedToWorkspace: Scalars["Boolean"];
+  /** The Origin installation id. */
+  installationId: Scalars["String"];
+  /** The slug of the Origin owner the app was installed on. */
+  ownerSlug: Scalars["String"];
+  /** Whether the Origin owner is a `team` or a `user`. */
+  ownerType?: Maybe<Scalars["String"]>;
+  /** Whether the installation covers `all` repositories of the owner or only `selected` ones. */
+  repositorySelection: Scalars["String"];
 };
 
 /** A generic type of notification. */
@@ -22262,6 +22361,12 @@ export type Query = {
   organizationInvites: OrganizationInviteConnection;
   /** [INTERNAL] Get workspace metadata by URL key or workspace ID. */
   organizationMeta?: Maybe<OrganizationMeta>;
+  /** [Internal] Builds the URL that starts installing Linear's Origin app into a codebase, or reinstalling it to grant new scopes. */
+  originInstallUrl: OriginInstallUrlPayload;
+  /** [Internal] Describes an Origin installation that started on Origin, for its installer to confirm before connecting. */
+  originInstallation: OriginInstallationDetails;
+  /** [Internal] Lists the Origin installations the current user started on Origin that no workspace has connected yet, matched by the user's email. */
+  originPendingInstallations: Array<OriginInstallationDetails>;
   /** [Internal] Fetches public details of an active partner-program offer by its partner slug. Returns null when no active offer matches the slug. */
   partnerOfferDetails?: Maybe<PartnerOfferDetailsPayload>;
   /** [Internal] Fetches the viewer's workspaces hosted in the serving cell, with each workspace's eligibility to redeem the given partner-offer token. Returns null when the token is invalid or the offer is no longer available. */
@@ -22298,6 +22403,8 @@ export type Query = {
   projects: ProjectConnection;
   /** Sends a test push notification to the authenticated user's registered devices. Useful for verifying that push notification delivery is working correctly. */
   pushSubscriptionTest: PushSubscriptionTestPayload;
+  /** Public resource quotas for the authenticated workspace. These are not subscription limits. */
+  quotas: OrganizationQuotaConnection;
   /** The current rate limit status for the authenticated client, including remaining quota and reset timing for each limit type. */
   rateLimitStatus: RateLimitPayload;
   /** Returns releases for the pipeline associated with the access key, ordered with the most recently completed or updated first. */
@@ -23010,6 +23117,10 @@ export type QueryOrganizationMetaArgs = {
   urlKey: Scalars["String"];
 };
 
+export type QueryOriginInstallationArgs = {
+  installationId: Scalars["String"];
+};
+
 export type QueryPartnerOfferDetailsArgs = {
   slug: Scalars["String"];
 };
@@ -23114,6 +23225,14 @@ export type QueryProjectsArgs = {
 export type QueryPushSubscriptionTestArgs = {
   sendStrategy?: InputMaybe<SendStrategy>;
   targetMobile?: InputMaybe<Scalars["Boolean"]>;
+};
+
+export type QueryQuotasArgs = {
+  after?: InputMaybe<Scalars["String"]>;
+  before?: InputMaybe<Scalars["String"]>;
+  filter?: InputMaybe<OrganizationQuotaFilter>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
 };
 
 export type QueryRecentReleasesByAccessKeyArgs = {
@@ -29427,6 +29546,7 @@ export enum WorkflowTrigger {
   ChatMessagePosted = "chatMessagePosted",
   ChatReactionAdded = "chatReactionAdded",
   CommentAdded = "commentAdded",
+  CommentResolved = "commentResolved",
   CustomerRequestAdded = "customerRequestAdded",
   CycleEnded = "cycleEnded",
   CycleStarted = "cycleStarted",
@@ -29435,6 +29555,7 @@ export enum WorkflowTrigger {
   EntityRemoved = "entityRemoved",
   EntityUnarchived = "entityUnarchived",
   EntityUpdated = "entityUpdated",
+  ReviewSubmitted = "reviewSubmitted",
   UpdatePosted = "updatePosted",
 }
 
@@ -29445,6 +29566,7 @@ export enum WorkflowTriggerType {
   Initiative = "initiative",
   Issue = "issue",
   Project = "project",
+  PullRequest = "pullRequest",
   Release = "release",
   Schedule = "schedule",
   Team = "team",
@@ -35195,6 +35317,11 @@ export type AiConversationPromptPartFragment = { __typename: "AiConversationProm
     user?: Maybe<{ __typename?: "User" } & Pick<User, "id">>;
   };
 
+export type OrganizationQuotaFragment = { __typename: "OrganizationQuota" } & Pick<
+  OrganizationQuota,
+  "limit" | "key" | "id" | "description" | "name"
+>;
+
 export type PresentedIssueSuggestionReasonFragment = { __typename: "PresentedIssueSuggestionReason" } & Pick<
   PresentedIssueSuggestionReason,
   "text"
@@ -37787,6 +37914,7 @@ export type OrganizationFragment = { __typename: "Organization" } & Pick<
   | "gitLinkbackMessagesEnabled"
   | "gitPublicLinkbackMessagesEnabled"
   | "feedEnabled"
+  | "suggestedBranchNameEnabled"
   | "roadmapEnabled"
   | "pullRequestTourEnabled"
   | "aiDiscussionSummariesEnabled"
@@ -50874,6 +51002,8 @@ type Node_OrganizationDomain_Fragment = { __typename: "OrganizationDomain" } & P
 
 type Node_OrganizationInvite_Fragment = { __typename: "OrganizationInvite" } & Pick<OrganizationInvite, "id">;
 
+type Node_OrganizationQuota_Fragment = { __typename: "OrganizationQuota" } & Pick<OrganizationQuota, "id">;
+
 type Node_PaidSubscription_Fragment = { __typename: "PaidSubscription" } & Pick<PaidSubscription, "id">;
 
 type Node_Post_Fragment = { __typename: "Post" } & Pick<Post, "id">;
@@ -51078,6 +51208,7 @@ export type NodeFragment =
   | Node_Organization_Fragment
   | Node_OrganizationDomain_Fragment
   | Node_OrganizationInvite_Fragment
+  | Node_OrganizationQuota_Fragment
   | Node_PaidSubscription_Fragment
   | Node_Post_Fragment
   | Node_PostNotification_Fragment
@@ -51976,6 +52107,31 @@ export type OrganizationInviteFullDetailsPayloadFragment = {
   | "createdAt"
   | "accepted"
   | "expired"
+>;
+
+export type OrganizationQuotaConnectionFragment = { __typename: "OrganizationQuotaConnection" } & {
+  nodes: Array<
+    { __typename: "OrganizationQuota" } & Pick<OrganizationQuota, "limit" | "key" | "id" | "description" | "name">
+  >;
+  pageInfo: { __typename: "PageInfo" } & Pick<
+    PageInfo,
+    "startCursor" | "endCursor" | "hasPreviousPage" | "hasNextPage"
+  >;
+};
+
+export type OriginInstallUrlPayloadFragment = { __typename: "OriginInstallUrlPayload" } & Pick<
+  OriginInstallUrlPayload,
+  "installUrl"
+>;
+
+export type OriginInstallationCancelPayloadFragment = { __typename: "OriginInstallationCancelPayload" } & Pick<
+  OriginInstallationCancelPayload,
+  "success"
+>;
+
+export type OriginInstallationDetailsFragment = { __typename: "OriginInstallationDetails" } & Pick<
+  OriginInstallationDetails,
+  "installationId" | "ownerSlug" | "ownerType" | "repositorySelection" | "connectedToWorkspace"
 >;
 
 export type PageInfoFragment = { __typename: "PageInfo" } & Pick<
@@ -71937,6 +72093,7 @@ export type OrganizationQuery = { __typename?: "Query" } & {
     | "gitLinkbackMessagesEnabled"
     | "gitPublicLinkbackMessagesEnabled"
     | "feedEnabled"
+    | "suggestedBranchNameEnabled"
     | "roadmapEnabled"
     | "pullRequestTourEnabled"
     | "aiDiscussionSummariesEnabled"
@@ -74589,6 +74746,26 @@ export type PushSubscriptionTestQueryVariables = Exact<{
 
 export type PushSubscriptionTestQuery = { __typename?: "Query" } & {
   pushSubscriptionTest: { __typename: "PushSubscriptionTestPayload" } & Pick<PushSubscriptionTestPayload, "success">;
+};
+
+export type QuotasQueryVariables = Exact<{
+  after?: InputMaybe<Scalars["String"]>;
+  before?: InputMaybe<Scalars["String"]>;
+  filter?: InputMaybe<OrganizationQuotaFilter>;
+  first?: InputMaybe<Scalars["Int"]>;
+  last?: InputMaybe<Scalars["Int"]>;
+}>;
+
+export type QuotasQuery = { __typename?: "Query" } & {
+  quotas: { __typename: "OrganizationQuotaConnection" } & {
+    nodes: Array<
+      { __typename: "OrganizationQuota" } & Pick<OrganizationQuota, "limit" | "key" | "id" | "description" | "name">
+    >;
+    pageInfo: { __typename: "PageInfo" } & Pick<
+      PageInfo,
+      "startCursor" | "endCursor" | "hasPreviousPage" | "hasNextPage"
+    >;
+  };
 };
 
 export type RateLimitStatusQueryVariables = Exact<{ [key: string]: never }>;
@@ -81478,6 +81655,7 @@ export type CreateDocumentMutation = { __typename?: "Mutation" } & {
 
 export type DeleteDocumentMutationVariables = Exact<{
   id: Scalars["String"];
+  ifParentDocumentId?: InputMaybe<Scalars["String"]>;
 }>;
 
 export type DeleteDocumentMutation = { __typename?: "Mutation" } & {
@@ -102413,6 +102591,7 @@ export const OrganizationFragmentDoc = new TypedDocumentString(
   gitLinkbackMessagesEnabled
   gitPublicLinkbackMessagesEnabled
   feedEnabled
+  suggestedBranchNameEnabled
   roadmapEnabled
   pullRequestTourEnabled
   aiDiscussionSummariesEnabled
@@ -119307,6 +119486,78 @@ export const OrganizationInviteFullDetailsPayloadFragmentDoc = new TypedDocument
     `,
   { fragmentName: "OrganizationInviteFullDetailsPayload" }
 ) as unknown as TypedDocumentString<OrganizationInviteFullDetailsPayloadFragment, unknown>;
+export const OrganizationQuotaFragmentDoc = new TypedDocumentString(
+  `
+    fragment OrganizationQuota on OrganizationQuota {
+  __typename
+  limit
+  key
+  id
+  description
+  name
+}
+    `,
+  { fragmentName: "OrganizationQuota" }
+) as unknown as TypedDocumentString<OrganizationQuotaFragment, unknown>;
+export const OrganizationQuotaConnectionFragmentDoc = new TypedDocumentString(
+  `
+    fragment OrganizationQuotaConnection on OrganizationQuotaConnection {
+  __typename
+  nodes {
+    ...OrganizationQuota
+  }
+  pageInfo {
+    ...PageInfo
+  }
+}
+    fragment OrganizationQuota on OrganizationQuota {
+  __typename
+  limit
+  key
+  id
+  description
+  name
+}
+fragment PageInfo on PageInfo {
+  __typename
+  startCursor
+  endCursor
+  hasPreviousPage
+  hasNextPage
+}`,
+  { fragmentName: "OrganizationQuotaConnection" }
+) as unknown as TypedDocumentString<OrganizationQuotaConnectionFragment, unknown>;
+export const OriginInstallUrlPayloadFragmentDoc = new TypedDocumentString(
+  `
+    fragment OriginInstallUrlPayload on OriginInstallUrlPayload {
+  __typename
+  installUrl
+}
+    `,
+  { fragmentName: "OriginInstallUrlPayload" }
+) as unknown as TypedDocumentString<OriginInstallUrlPayloadFragment, unknown>;
+export const OriginInstallationCancelPayloadFragmentDoc = new TypedDocumentString(
+  `
+    fragment OriginInstallationCancelPayload on OriginInstallationCancelPayload {
+  __typename
+  success
+}
+    `,
+  { fragmentName: "OriginInstallationCancelPayload" }
+) as unknown as TypedDocumentString<OriginInstallationCancelPayloadFragment, unknown>;
+export const OriginInstallationDetailsFragmentDoc = new TypedDocumentString(
+  `
+    fragment OriginInstallationDetails on OriginInstallationDetails {
+  __typename
+  installationId
+  ownerSlug
+  ownerType
+  repositorySelection
+  connectedToWorkspace
+}
+    `,
+  { fragmentName: "OriginInstallationDetails" }
+) as unknown as TypedDocumentString<OriginInstallationDetailsFragment, unknown>;
 export const PasskeyLoginStartResponseFragmentDoc = new TypedDocumentString(
   `
     fragment PasskeyLoginStartResponse on PasskeyLoginStartResponse {
@@ -141770,6 +142021,7 @@ fragment Organization on Organization {
   gitLinkbackMessagesEnabled
   gitPublicLinkbackMessagesEnabled
   feedEnabled
+  suggestedBranchNameEnabled
   roadmapEnabled
   pullRequestTourEnabled
   aiDiscussionSummariesEnabled
@@ -145799,6 +146051,42 @@ export const PushSubscriptionTestDocument = new TypedDocumentString(`
   __typename
   success
 }`) as unknown as TypedDocumentString<PushSubscriptionTestQuery, PushSubscriptionTestQueryVariables>;
+export const QuotasDocument = new TypedDocumentString(`
+    query quotas($after: String, $before: String, $filter: OrganizationQuotaFilter, $first: Int, $last: Int) {
+  quotas(
+    after: $after
+    before: $before
+    filter: $filter
+    first: $first
+    last: $last
+  ) {
+    ...OrganizationQuotaConnection
+  }
+}
+    fragment OrganizationQuota on OrganizationQuota {
+  __typename
+  limit
+  key
+  id
+  description
+  name
+}
+fragment OrganizationQuotaConnection on OrganizationQuotaConnection {
+  __typename
+  nodes {
+    ...OrganizationQuota
+  }
+  pageInfo {
+    ...PageInfo
+  }
+}
+fragment PageInfo on PageInfo {
+  __typename
+  startCursor
+  endCursor
+  hasPreviousPage
+  hasNextPage
+}`) as unknown as TypedDocumentString<QuotasQuery, QuotasQueryVariables>;
 export const RateLimitStatusDocument = new TypedDocumentString(`
     query rateLimitStatus {
   rateLimitStatus {
@@ -155446,8 +155734,8 @@ export const CreateDocumentDocument = new TypedDocumentString(`
   success
 }`) as unknown as TypedDocumentString<CreateDocumentMutation, CreateDocumentMutationVariables>;
 export const DeleteDocumentDocument = new TypedDocumentString(`
-    mutation deleteDocument($id: String!) {
-  documentDelete(id: $id) {
+    mutation deleteDocument($id: String!, $ifParentDocumentId: String) {
+  documentDelete(id: $id, ifParentDocumentId: $ifParentDocumentId) {
     ...DocumentArchivePayload
   }
 }
